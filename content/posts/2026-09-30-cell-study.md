@@ -24,8 +24,18 @@ combines evidence assigned to that gene.
 
 **Expression** is the production of gene products. For this diary, “expression” refers to an RNA-based measurement. The DNA locus and the amount of RNA associated with it are different objects. [Gene expression](https://www.genome.gov/genetics-glossary/Gene-Expression)
 
-![DNA, RNA, and observed counts](assets/dna-rna-counts.png)
-*Figure 1. One donor is heterozygous A/G at a SNP. A T cell and a B cell share that inherited genotype but contain different numbers of RNA molecules from the depicted gene. Orange RNA marks represent an idealized captured subset. All numbers are invented.*
+![From a person to a gene-expression count](assets/01-what-is-measured.png)
+
+*Figure 1. Person → sampled cells → DNA transcription → RNA → capture and tagged cDNA → sequencing → cell–gene counts. Gene X and Gene Y are hypothetical examples. Molecule icons and counts are illustrative. RNA processing occurs primarily in the nucleus before export; the diagram compresses these steps.*
+
+
+**What is an RNA molecule?** It is a physical strand made from RNA nucleotides. Transcription uses a gene's DNA as a template to produce an RNA transcript. For these protein-coding examples, the initial pre-mRNA is processed into mature mRNA. Repeated transcription produces multiple molecules; processing does not multiply a single transcript into many copies. [Transcription](https://www.genome.gov/genetics-glossary/Transcription)
+
+**Why only the captured molecules?** The assay observes an incomplete sample of RNA. Capture, conversion into tagged cDNA, sequencing, and read assignment all affect what reaches the count matrix. Captured RNA is not a category of more important RNA. A value of 2 in the Gene X column and Cell 1 row means two counted Gene X UMI units assigned to that cell; it does not mean the cell contained only two Gene X RNA molecules. A cell barcode identifies the cell, sequence alignment identifies the gene, and a UMI helps distinguish molecules from amplification duplicates.
+
+**What can change the count?** Biology changes RNA abundance through cell type/state, genotype, RNA production, and RNA degradation. The experiment changes detection through capture efficiency, sequencing depth, and read assignment. In the simple model below, these enter as abundance and detection probability.
+
+**Location vocabulary:** coding sequence is only part of a protein-coding gene. An intronic SNP is inside the gene but outside its coding sequence. A nearby SNP can lie outside the gene. Neither location alone establishes an eQTL. A nearby variant associated with a gene's expression can be a cis-eQTL; being outside coding sequence does not make it trans. [EMBL-EBI eQTL Catalogue](https://www.ebi.ac.uk/eqtl/)
 
 ## 2. Notation
 
@@ -234,9 +244,9 @@ $$
 At steady state, under these simplifying assumptions,
 
 $$
-\lambda^{*}_{icsg}=\frac{k_{icsg}}{d_{icsg}},
+\lambda_{icsg}=\frac{k_{icsg}}{d_{icsg}},
 \qquad
-E[C_{icsg}]=q_{ics}\lambda^{*}_{icsg}.
+E[C_{icsg}]=q_{ics}\lambda_{icsg}.
 $$
 
 The second equation uses the idealized detection model from Section 3. More production, slower degradation, or better detection can each increase the expected observed count. They are different mechanisms. Even with the same underlying parameters, realized counts fluctuate. RNA stability is itself a regulated component of expression. [RNA stability and posttranscriptional control](https://www.ncbi.nlm.nih.gov/books/NBK26890/)
