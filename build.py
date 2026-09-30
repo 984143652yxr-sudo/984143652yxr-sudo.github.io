@@ -28,7 +28,9 @@ esc = html.escape
 
 def render_md(text):
     text = text.replace('{{base}}', base)
-    rendered = markdown.markdown(text, extensions=['fenced_code', 'tables', 'toc', 'md_in_html'])
+    rendered = markdown.markdown(text,
+        extensions=['fenced_code', 'tables', 'toc', 'md_in_html', 'pymdownx.arithmatex'],
+        extension_configs={'pymdownx.arithmatex': {'generic': True}})
     return rendered.replace('<table>', '<div class="table-wrap"><table>').replace('</table>', '</table></div>')
 
 def page(route, title, content, active, description=None):
@@ -42,6 +44,7 @@ def page(route, title, content, active, description=None):
     dest.write_text(template.substitute(title=esc(title), name=esc(config['name']),
         initials=esc(config['initials']), description=esc(description or config['description']),
         tagline=esc(config['tagline']), base=base, navigation=nav, content=content,
+        math_script='<script defer src="https://cdn.jsdelivr.net/npm/mathjax@4.0.0/tex-mml-chtml.js"></script>' if 'class="arithmatex"' in content else '',
         affiliation=esc(config.get('affiliation', '')),
         email=f'<a href="mailto:{esc(config["email"])}">{esc(config["email"])}</a>' if config.get('email') else '',
         github=f'<a href="{esc(github)}">GitHub ↗</a>' if github else ''), encoding='utf-8')

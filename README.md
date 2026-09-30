@@ -30,3 +30,13 @@ Use this folder as the **root of a separate website repository**, not the parent
 The included workflow installs the pinned Markdown dependency, builds the website, checks internal links and fragments, and deploys only `_site/`.
 
 Official references: [Create a Pages site](https://docs.github.com/en/pages/getting-started-with-github-pages/creating-a-github-pages-site) and [use custom workflows](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages).
+
+## Add or edit a diary entry
+
+1. Edit a Markdown file in `content/posts/`. Copy an existing complete JSON header. Keep all seven fields: `slug`, `title`, `date`, `date_label`, `status`, `reading_time`, `summary`. The final JSON field has **no trailing comma**.
+2. Upload figures to the repository's top-level `assets/` folder, such as `assets/cell-study/figure.png`.
+3. Reference that image as `![Figure caption]({{base}}/assets/cell-study/figure.png)`. Files stored under `content/posts/assets/` are source files and are not copied by this builder.
+4. Use `$...$` for inline math and `$$...$$` for display math, with blank lines around display blocks. The builder preserves TeX and the page loads MathJax when needed.
+5. Commit the changes to `main`. In GitHub's **Actions** tab, wait for **Publish study diary** to finish successfully. Then open `/diary/` or `/diary/YOUR-SLUG/` on the website. If a run fails, open its build log; the previous successful site remains live.
+
+The September 30 entry is `content/posts/2026-09-30-cell-study.md` and appears at `/diary/cell-study/`.

@@ -14,7 +14,9 @@ The same genome is present across many cell types, but the relationship between 
 - How does finite cell sampling affect pseudobulk precision?
 - When does a difference in statistical significance reflect power rather than a difference in biology?
 
-**Current study:** [Replicating CIGMA on OneK1K]({{base}}/diary/cigma-onek1k/).
+**Start here:** [How do we understand changes in single-cell expression?]({{base}}/diary/cell-study/) — the measurement process and models for genetics, regulation, and RNA kinetics.
+
+**Replication:** [Replicating CIGMA on OneK1K]({{base}}/diary/cigma-onek1k/).
 
 </section>
 

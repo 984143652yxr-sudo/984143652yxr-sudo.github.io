@@ -5,3 +5,9 @@
 .profile-affiliation{font-size:13px;line-height:1.6;color:var(--muted);margin-top:-12px;margin-bottom:22px}.profile-links a{overflow-wrap:anywhere}.publication{margin:20px 0 30px}.publication p{line-height:1.9}.publication strong:first-child{font-weight:600}
 
 @media(max-width:600px){.profile{display:block;margin-bottom:27px;padding-bottom:18px;border-bottom:1px solid var(--line)}.profile-name{font-size:20px}.profile-tagline{margin-bottom:8px}.profile-affiliation{margin:0 0 12px}.profile-links{flex-direction:row;flex-wrap:wrap;gap:8px 20px}}
+
+/* Keep mathematical detail available without interrupting the reading flow. */
+.prose details { margin: 1.2rem 0; padding: .9rem 1rem; border: 1px solid #d8dee4; border-radius: 6px; background: #f6f8fa; }
+.prose summary { cursor: pointer; font-weight: 600; }
+.prose details[open] summary { margin-bottom: 1rem; }
+.prose .arithmatex { overflow-x: auto; }
