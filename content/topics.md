@@ -14,7 +14,9 @@ The same genome is present across many cell types, but the relationship between 
 - How does finite cell sampling affect pseudobulk precision?
 - When does a difference in statistical significance reflect power rather than a difference in biology?
 
-**Start here:** [How do we understand changes in single-cell expression?]({{base}}/diary/cell-study/) — the measurement process and models for genetics, regulation, and RNA kinetics.
+**Start here:** [Genetic variation across genes, cells, and cell states]({{base}}/diary/cell-study/) — measurement, eQTLs, genetic variance, and cell-state models.
+
+**Fine-mapping:** [From CIGMA to CASE: which SNP, in which cell type?]({{base}}/diary/case-fine-mapping/) — reading notes, an LD example, and preliminary overlap results.
 
 **Replication:** [Replicating CIGMA on OneK1K]({{base}}/diary/cigma-onek1k/).
 
