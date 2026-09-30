@@ -1,229 +1,307 @@
 ---
 {
   "slug": "case-fine-mapping",
-  "title": "From CIGMA to CASE: which SNP, in which cell type?",
+  "title": "CIGMA and CASE: variance components, fine-mapping, and cellular context",
   "date": "2026-09-30",
   "date_label": "September 30, 2026",
-  "status": "Reading & local investigation",
+  "status": "Statistical study note",
   "reading_time": "13 min read",
-  "summary": "Moving from gene-level genetic variance to SNP-by-cell-type fine-mapping: my CASE reading notes, an LD example, and a preliminary OneK1K overlap analysis."
+  "summary": "Gaussian cis-SNP effects → joint effect matrices → credible sets and eGenes → overlap and biological enrichment."
 }
 ---
 
-## 1. The question left after CIGMA
+## 1. CIGMA: genetic variance across cell types
 
-After studying [CIGMA on OneK1K]({{base}}/diary/cigma-onek1k/), my next question is: **which variant contributes to a gene's cell-type-dependent regulation, and in which cells does it act?**
-
-CIGMA quantifies shared and cell-type-specific genetic variance for a gene and can detect cell-type-specific eGenes. Its variance components summarize a set of SNPs. Individual-variant localization and GWAS colocalization require additional inference. This is the gap that motivates my study of **CASE: Cell-type-specific And Shared EQTL fine-mapping**. [CIGMA paper](https://www.nature.com/articles/s41586-026-10577-6)
-
-For one gene, the simplified CIGMA construction from my [previous note]({{base}}/diary/cell-study/) is
+Fix one gene and retain $M$ SNPs in its cis region. Let $Y_{ic}$ be expression for donor $i$ in cell type $c$, and let $Z_{ij}$ be standardized genotype at SNP $j$. A simplified shared-plus-specific model is
 
 $$
-Y_{ic}=\mu_c+W_i^\top\gamma_c+\sum_j Z_{ij}(\alpha_j+\eta_{jc})+r_{ic}.
+Y_{ic}=\mu_c+W_i^\top\gamma_c+
+\underbrace{\sum_{j=1}^{M}Z_{ij}(\alpha_j+\eta_{jc})}_{a_{ic}:\ \text{genetic contribution}}+r_{ic},
 $$
 
-The shared component $\alpha_j$ and type-dependent deviation $\eta_{jc}$ induce genetic variances $\sigma^2_{\rm shared}$ and $v_c$. Their aggregate specificity is
-
 $$
-\text{specificity}=\frac{\bar v}{\sigma^2_{\rm shared}+\bar v},
-\qquad \bar v=\text{mean of }v_c\text{ across cell types}.
+\alpha_j\sim N\left(0,\frac{\sigma^2_{\rm shared}}{M}\right),\qquad
+\eta_{jc}\sim N\left(0,\frac{v_c}{M}\right).
 $$
 
-This simplified equation keeps the estimand visible; the fitted CIGMA model additionally handles its specified residual and sampling structure.
+$\alpha_j$ is shared across cell types; $\eta_{jc}$ is a cell-type deviation. The independent Gaussian coefficients extend over **all retained cis SNPs**. The $1/M$ scaling makes the parameters describe aggregate genetic variance. With $K=ZZ^\top/M$,
 
-A variance summary leaves many possible SNP-effect configurations compatible with the result. For example, one strongly varying SNP and several weakly varying SNPs can contribute similar total variance. The follow-up therefore needs a model for the **individual effect matrix**.
+$$
+\operatorname{Cov}(a_{ic},a_{\ell d}\mid Z)
+=K_{i\ell}\left[\sigma^2_{\rm shared}+\mathbf1(c=d)v_c\right].
+$$
 
-| Question | Output I need |
+| Parameter or test | Target |
 |---|---|
-| How much of a gene's genetic regulation varies across cell types? | Shared/specific variance components |
-| Which SNPs plausibly generate the signal? | Variant posterior probabilities and credible sets |
-| In which cell types is each SNP supported? | A SNP-by-cell-type effect profile |
-| Does the regulatory signal share a causal variant with a disease association? | A separate colocalization analysis using compatible locus-level data |
+| $\sigma^2_{\rm shared}$ | Shared genetic variance |
+| $v_c$ | Additional genetic variance specific to type $c$ in this construction |
+| $H_0:v_1=\cdots=v_C=0$ | A gene-level test of cell-type specificity |
+| $\bar v/(\sigma^2_{\rm shared}+\bar v)$ | Aggregate specificity, where $\bar v=C^{-1}\sum_c v_c$ |
 
-### Why this distinction matters quantitatively
+The fitted CIGMA specification also accounts for residual dependence and finite-cell measurement uncertainty. The equations above isolate its genetic component. [CIGMA: Chen & Dahl (2026)](https://www.nature.com/articles/s41586-026-10577-6)
 
-In the published CIGMA OneK1K analysis, 193 of 10,288 genes passed the cs-eGene threshold, using 928 donors and seven cell types. Estimated specificity was 31.1% for cis and 59.4% for trans regulation. A bulk-like aggregate gave about 5% cis specificity, versus about 30% at cell-type resolution. These are variance fractions; the number of significant genes also depends on detection power. [CIGMA results](https://www.nature.com/articles/s41586-026-10577-6)
+### From a variance parameter to a causal-variant question
 
-CASE reported 5,057 eGenes among 11,704 candidate genes in OneK1K: 13.0% more than mvSuSiE and 32.9% more than SuSiE. Those comparisons concern fine-mapping discoveries under the paper's design. [Lin et al., CASE (2026)](https://www.nature.com/articles/s41467-026-72176-3)
+Integrating over the Gaussian coefficients produces a likelihood for variance components. A nondegenerate Gaussian prior assigns probability zero to an exactly zero coefficient; it supplies no SNP-level inclusion indicator. CIGMA therefore characterizes **how much genetic regulation differs across cell types**, while its standard outputs leave individual causal-SNP localization unresolved.
 
-The two counts answer different questions: CIGMA's cs-eGene test concerns heterogeneity, while CASE's eGene call requires a credible set in at least one cell type. Their denominators and preprocessing also differ. My practical motivation is to connect **heterogeneous genetic regulation → candidate variants → cellular context**.
+A gene can have $v_c>0$ even when it has effects in every cell type: differences in magnitude are sufficient. Several SNP-effect configurations can also produce similar aggregate covariance. Fine-mapping introduces a sparse, variant-level model to distinguish plausible configurations using LD.
 
-## 2. My notes: LD can imitate or hide sharing
+**Quantitative motivation.** Published CIGMA results estimated cis specificity at 31.1%, compared with 59.4% for trans regulation; a bulk-like expression aggregate gave about 5% cis specificity. Its OneK1K analysis detected 193 cs-eGenes among 10,288 genes. These figures quantify variance and gene-level heterogeneity, respectively. [CIGMA results](https://www.nature.com/articles/s41586-026-10577-6)
 
-The two sketches in my handwritten notes are the starting point. A marginal SNP association contains contributions from other correlated SNPs. Consequently, a pattern of marginal associations across cell types can differ from the pattern of underlying joint effects.
+## 2. CASE: one effect matrix for all cell types
 
-For standardized genotype columns and one cell type,
+For the same gene, organize all cell types jointly:
 
 $$
-y=X\beta+\epsilon,\qquad
-\widehat b=X^\top y/N,
-\qquad E[\widehat b\mid\beta]\approx R\beta,
+y_c=X_c\beta_c+\epsilon_c,\qquad c=1,\ldots,C,
 $$
 
-where $R=X^\top X/N$ is the LD correlation matrix under this normalization. Across cell types, this becomes $E[\widehat B\mid B]\approx RB$.
+$$
+B=(\beta_1,\ldots,\beta_C)
+=\begin{pmatrix}
+\beta_{11}&\cdots&\beta_{1C}\\
+\vdots&\ddots&\vdots\\
+\beta_{M1}&\cdots&\beta_{MC}
+\end{pmatrix}\in\mathbb R^{M\times C}.
+$$
 
-<figure class="study-figure study-figure-wide">
-<a href="{{base}}/assets/case-study/ld-effects.png"><img src="{{base}}/assets/case-study/ld-effects.png" alt="Two deterministic examples comparing joint SNP effects with LD-mixed marginal associations across two cell types"></a>
-<figcaption>My numerical version of the two LD sketches. Rows are SNPs, columns are cell types; entries are effects in arbitrary teaching units. The right panels are computed as RB. Click to enlarge.</figcaption>
+**Rows are SNPs; columns are cell types.** Column $\beta_c$ contains the cis effects for type $c$. Row $B_j=(\beta_{j1},\ldots,\beta_{jC})$ contains one SNP's effects across all types. Different types can have different numbers of donors, so the $X_c$ matrices can have different row counts.
+
+| Symbol | Meaning |
+|---|---|
+| $y_c$, $X_c$ | Adjusted standardized expression; standardized donor-by-SNP genotypes |
+| $N_c$, $N_{cd}$ | Donors in type $c$; donors overlapping types $c,d$ |
+| $B$, $\widehat B$ | Joint effects; marginal association estimates, both $M\times C$ |
+| $R$ | $M\times M$ LD matrix across SNPs |
+| $V$ | $C\times C$ sampling covariance across cell-type statistics |
+| $U_t$, $\pi_t$ | Effect covariance for sharing pattern $t$; pattern probability |
+
+### LD separates marginal associations from joint effects
+
+For standardized variables,
+
+$$
+\widehat b_c=X_c^\top y_c/N_c,\qquad
+E[\widehat b_c\mid\beta_c]\approx R\beta_c.
+$$
+
+<figure class="study-figure" style="max-width:600px">
+<a href="{{base}}/assets/case-study/ld-simple.svg"><img src="{{base}}/assets/case-study/ld-simple.svg" alt="Two SNPs each affect a different cell type, but LD creates marginal associations in both types"></a>
+<figcaption>Figure 1. A two-SNP example with LD correlation 0.8. Joint effects are sparse across types; marginal associations spread across both columns. Values are illustrative.</figcaption>
 </figure>
 
-**Top row — apparent sharing.** SNP 1 acts only in cell type 1; SNP 2 acts only in cell type 2. With LD correlation 0.8, each SNP has a marginal association in both types. Interpreting those marginal associations as direct effects would spread support across cells.
+The first SNP's marginal effect in type 2 is $0+0.8\times1=0.8$, although its joint effect is zero. Opposing joint effects can instead cancel. The statistical task is to infer $B$ from LD-mixed observations $\widehat B$.
 
-**Bottom row — cancellation.** SNP 1 has effect 1 in both types, while SNP 2 has effect −1 in type 2. LD reduces the marginal effect of SNP 1 in type 2 to $1-0.8=0.2$. A shared joint effect can therefore look much weaker in one type.
+### Summary-statistic likelihood
 
-This explains my concern about learning sharing patterns directly from marginal statistics. The comparison should specify whether a method accounts for LD **while learning the sharing prior**, during fine-mapping, or both. Conclusions about mvSuSiE should also specify the prior configuration being evaluated.
-
-## 3. CASE model, following my handwritten derivation
-
-Hold one gene fixed. The unit of expression measurement is a **donor within a cell type**; the target is a **SNP's effect across cell types**.
-
-| Symbol | Object and dimension |
-|---|---|
-| $c$, $N_c$ | Cell type; number of donors observed in that type |
-| $M$, $C$ | Number of cis SNPs; number of cell types |
-| $y_c$, $X_c$ | Adjusted, standardized expression; donor-by-SNP genotype matrix |
-| $B$ | $M\times C$ joint-effect matrix; row $B_j$ describes SNP $j$ across types |
-| $\widehat B$ | $M\times C$ marginal association estimates |
-| $R$ | $M\times M$ LD matrix: dependence across SNPs |
-| $V$ | $C\times C$ sample-adjusted covariance: dependence across cell-type statistics |
-| $U_t$, $\pi_t$ | Effect covariance for sharing pattern $t$; its mixture weight |
-
-### Expression regression → summary-statistic likelihood
-
-The underlying regressions are
+CASE uses the approximate matrix-normal likelihood
 
 $$
-y_c=X_c\beta_c+\epsilon_c,\qquad B=(\beta_1,\ldots,\beta_C).
-$$
-
-Using the notation in my notes,
-
-$$
-\widehat B=\left(\frac{X_1^\top y_1}{N_1},\ldots,
-\frac{X_C^\top y_C}{N_C}\right),\qquad
-\widehat B\mid B\ \dot\sim\ \operatorname{MN}(RB,R,V).
-$$
-
-The dot indicates a summary-statistic approximation. A common LD matrix assumes sufficiently comparable genotype correlation structures across the cell-type samples. The matrix-normal form can be read as
-
-$$
+\widehat B\mid B\ \dot\sim\ \operatorname{MN}(RB,R,V),
+\qquad
 \operatorname{Cov}(\widehat B_{jc},\widehat B_{kd}\mid B)
 \approx R_{jk}V_{cd}.
 $$
 
-Thus $R$ describes correlations across SNP rows, while $V$ describes correlations across cell-type columns. This distinction resolves two different sources of apparent sharing.
-
-For overlapping donors, the sample-size adjustment in my notes is
+$R$ models dependence across SNPs, and $V$ models dependence across cell-type statistics. The sample-overlap adjustment is
 
 $$
-V_{cd}=V_{y,cd}\frac{N_{cd}}{N_cN_d}.
+V_{cd}=V_{y,cd}\frac{N_{cd}}{N_cN_d},\qquad V_{cc}=1/N_c
+\quad\text{for standardized expression}.
 $$
 
-Here $N_{cd}$ counts shared donors and $V_y$ is the phenotypic covariance used by the approximation. With standardized expression, $V_{cc}=1/N_c$. With no donor overlap, the off-diagonal sampling term is zero under the model assumptions. For example, $N_c=N_d=800$, $N_{cd}=600$, and $V_{y,cd}=0.4$ give $V_{cd}=0.000375$.
+$V_y$ is the phenotypic covariance used by the approximation. A common $R$ requires comparable LD across the sampled donor groups. [CASE model: Lin et al. (2026)](https://www.nature.com/articles/s41467-026-72176-3)
 
-### Why a mixture of covariance matrices?
+### A sparse prior on each SNP row
 
-My notes write a mixture prior for one SNP's effect vector:
-
-$$
-B_j\sim\sum_{t=1}^{T}\pi_t N_C(0,U_t),\qquad
-\sum_t\pi_t=1.
-$$
-
-Each matrix represents a possible pattern. For three cell types, examples are
+Introduce a latent sharing pattern $z_j$:
 
 $$
-U_{\rm type\ 1}=s^2
-\begin{pmatrix}1&0&0\\0&0&0\\0&0&0\end{pmatrix},\qquad
-U_{\rm types\ 1,2}=s^2
-\begin{pmatrix}1&\rho&0\\\rho&1&0\\0&0&0\end{pmatrix}.
+z_j\sim\operatorname{Categorical}(\pi_0,\ldots,\pi_T),\qquad
+B_j\mid z_j=t\sim N_C(0,U_t),\qquad U_0=0.
 $$
 
-The first allows an effect only in type 1. The second allows effects in types 1 and 2, with correlation $\rho$ and potentially different realized magnitudes. Here $|\rho|\le1$ ensures a valid covariance. An all-zero matrix supplies a point mass at the null effect vector.
-
-A zero diagonal variance fixes that cell type's effect at zero under the pattern. Positive diagonal entries allow effects; off-diagonal entries describe how they co-vary. A zero off-diagonal alone means uncorrelated effects under that component. It does **not** imply that either cell type has zero effect. This is the distinction behind the “why $U_t$?” question in my notes.
-
-### Fitting → posterior support
-
-The model structure in my notes separates three operations:
-
-1. Estimate sampling covariance $V$. For weak-signal SNPs $H$, the moment $|H|^{-1}\sum_{j\in H}\widehat B_j^\top\widehat B_j$ motivates a covariance estimate, followed by sample-size scaling. This relies on weak signals contributing little genetic mean.
-2. Learn $\pi_t$ and $U_t$ using Monte Carlo EM: sample latent effects/patterns under the LD-aware likelihood, then update the prior parameters.
-3. With the fitted prior, sample the posterior and estimate
+The null component sets the entire row to zero. Other components allow effects in selected cell types. For three types, two illustrative patterns are
 
 $$
-\operatorname{PIP}_{jc}=P(B_{jc}\ne0\mid\widehat B,R,\widehat V,\widehat\pi,\widehat U).
+U_{\{1\}}=s^2\begin{pmatrix}1&0&0\\0&0&0\\0&0&0\end{pmatrix},\qquad
+U_{\{1,2\}}=s^2\begin{pmatrix}1&\rho&0\\\rho&1&0\\0&0&0\end{pmatrix},
+\quad |\rho|\le1.
 $$
 
-The PIP targets a SNP–cell-type pair. A high value supports a modeled effect; its interpretation depends on the candidate variants, LD, prior, and sampling approximation. Very strong LD can leave multiple SNPs plausible even when a locus is clearly associated.
+A zero diagonal fixes that cell's effect at zero. Positive diagonals allow nonzero effects; off-diagonals describe their correlation. Shared activity can have different effect magnitudes. General fitted matrices can also have unequal variances across active types.
 
-The [authors' package](https://github.com/leaffur/CASE) provides the implementation. I checked its [input interface](https://github.com/leaffur/CASE/blob/13f4fc8432ba39853128a4afc5dd8c6a151589a0/R/CASE.R): summary statistics must align with LD; a sample-size vector assumes pairwise overlap equal to the smaller sample size. An explicit overlap matrix represents other designs. The optional input covariance defaults to independence, so its construction needs an explicit decision.
-
-### Credible sets: what probability is being summarized?
-
-The [inspected utility code](https://github.com/leaffur/CASE/blob/13f4fc8432ba39853128a4afc5dd8c6a151589a0/R/CASE_uitility.R) groups variants using defaults of cumulative PIP at least 0.95 and pairwise absolute LD correlation at least 0.5. This clarifies the unsigned LD threshold in my notes.
-
-There is a useful probability distinction. In a multi-causal model,
+The inference sequence is
 
 $$
-\sum_{j\in A}\operatorname{PIP}_{jc}
-=E[\text{number of active SNPs in }A\mid\text{data}],
+(\widehat B,R,N)\ \longrightarrow\ \widehat V
+\ \longrightarrow\ (\widehat\pi_t,\widehat U_t)
+\ \longrightarrow\ P(B\mid\text{data})
+\ \longrightarrow\operatorname{PIP}_{jc}.
 $$
 
-whereas set coverage concerns $P(\text{at least one active SNP in }A\mid\text{data})$. Equality holds when at most one SNP in the set can be active. I therefore treat the reported sets according to CASE's construction and assess their empirical coverage, rather than deriving a universal coverage guarantee from the PIP sum alone.
+Monte Carlo EM learns the sharing mixture under the LD-aware likelihood. Posterior sampling then estimates
 
-## 4. Offline investigation: what I checked
+$$
+\operatorname{PIP}_{jc}=P(\beta_{jc}\ne0\mid\widehat B,R,\widehat V,\widehat\pi,\widehat U).
+$$
 
-This entry combines my photographed notes, a source-code reading, and a small local calculation. **A fresh CASE fit on OneK1K was not run for this entry.**
+The model borrows information across cell types through $U_t$, while the likelihood accounts for LD through $R$. Implementation details and input conventions are given in the [CASE source](https://github.com/leaffur/CASE/blob/13f4fc8432ba39853128a4afc5dd8c6a151589a0/R/CASE.R).
 
-| Check | Result and interpretation |
-|---|---|
-| Multiply $R B$ for the two sketches | Reproduces apparent sharing and cancellation in Figure 1 |
-| Recover $B=R^{-1}\widehat B$ in the noise-free example | Recovers the specified effects; the matrix has condition number 9 |
-| Inspect the package interface | Sample overlap and covariance inputs require attention |
-| Inspect credible-set code | Confirms use of absolute LD correlation in the implementation |
-| Compare with my September 28 report | Recovers the preliminary gene-overlap results below |
+## 3. From PIPs to credible sets, eQTLs, and eGenes
 
-The toy inversion is an algebra check. With noisy data, nearly singular LD amplifies uncertainty; regularization and posterior inference become important. The heatmap illustrates the problem CASE addresses, without measuring CASE's performance.
+### Cell-type-wise credible-set construction
 
-[Download the reproducible Python calculation]({{base}}/assets/case-study/ld_example.py) · [Vector figure]({{base}}/assets/case-study/ld-effects.svg)
+For gene $g$ and type $c$, let $A$ be a candidate SNP set. CASE's default set criteria are
 
-## 5. CIGMA–CASE overlap: pipeline and preliminary results
+$$
+\sum_{j\in A}\operatorname{PIP}_{jc}\ge0.95,\qquad
+\min_{j\ne k\in A}|R_{jk}|\ge0.5.
+$$
 
-My September 28 progress report contains an existing downstream comparison. The workflow is:
+The [implementation](https://github.com/leaffur/CASE/blob/13f4fc8432ba39853128a4afc5dd8c6a151589a0/R/CASE_models.R) scans SNPs in descending PIP order, reports singleton sets for PIP at least 0.95, and otherwise searches LD-compatible candidates for sufficient cumulative PIP. Selected variants are flagged before continuing. The [search utility](https://github.com/leaffur/CASE/blob/13f4fc8432ba39853128a4afc5dd8c6a151589a0/R/CASE_uitility.R) returns the first valid set under its ordering; this is an operational search rather than a demonstrated global minimum-cardinality solution.
 
-**gene-level CIGMA calls → intersect tested gene IDs → join CASE credible-set calls → align broad lineages → compare detection and sharing**.
+<figure class="study-figure study-figure-wide">
+<a href="{{base}}/assets/case-study/credible-set-example.svg"><img src="{{base}}/assets/case-study/credible-set-example.svg" alt="A worked example in which two correlated SNPs accumulate PIP 0.96 in cell type A, while type B has insufficient posterior support"></a>
+<figcaption>Figure 2. Illustrative PIPs for one gene. In type A, SNPs 1 and 2 form a reported set; type B has insufficient support. These numbers demonstrate the calling rule.</figcaption>
+</figure>
 
-The local CIGMA analysis used 785 donors and seven finer cell types. CASE used eight broader lineages with differing donor availability. For the cell comparison, the report aligned **B, CD4, CD8, and NK**. The gene-level universe was restricted to 8,285 genes tested by both pipelines.
+The output for one gene is a collection of sets **for each cell type**:
 
-| Within the common tested universe | CASE eGene | CASE without an eGene call |
+$$
+\mathcal C_{gc}=\{A_{gc1},\ldots,A_{gcL_{gc}}\}.
+$$
+
+Several sets may represent several signals. SNPs within a set remain competing or jointly plausible candidates. The term “putative causal eQTLs” refers to variants prioritized in these sets; set membership alone does not establish every member as causal.
+
+### The eGene calling rule
+
+A gene has an eGene call in cell type $c$ when at least one credible set is reported:
+
+$$
+E_{gc}=\mathbf1(L_{gc}\ge1),\qquad
+E_g=\mathbf1\left(\sum_{c=1}^{C}E_{gc}\ge1\right).
+$$
+
+The vector $(E_{g1},\ldots,E_{gC})$ describes the **gene's detected cell-type pattern**. Different cell types can support different variants for the same gene. Gene-level sharing therefore does not by itself establish sharing of the same causal SNP.
+
+### Interpreting “95%”
+
+The posterior probability of a set containing an active variant is
+
+$$
+P\left(\sum_{j\in A}\mathbf1(\beta_{jc}\ne0)\ge1\mid\text{data}\right).
+$$
+
+The PIP sum instead equals the posterior expected number of active variants. They coincide under an at-most-one-active-variant assumption within the set. In general multi-causal settings, CASE's nominal set rule should be assessed through coverage calibration.
+
+**Published result.** CASE identified 5,057 eGenes among 11,704 candidate genes in OneK1K, 13.0% more than mvSuSiE and 32.9% more than SuSiE in that comparison. Its simulations varied sample size, heritability, and sharing patterns, including null cell types to test over-sharing. [CASE results](https://www.nature.com/articles/s41467-026-72176-3)
+
+## 4. CIGMA–CASE overlap
+
+A gene-level comparison requires a common tested universe:
+
+$$
+\mathcal G=\mathcal G_{\rm tested,CIGMA}\cap\mathcal G_{\rm tested,CASE}
+\quad\longrightarrow\quad
+\text{join gene calls}\quad\longrightarrow\quad
+\text{compare cell-type patterns}.
+$$
+
+The preliminary OneK1K comparison used 8,285 common genes. For lineage-level interpretation, the seven finer CIGMA types were aligned to **B, CD4, CD8, and NK** in CASE. The CIGMA eGene list combines its shared and specific discovery categories.
+
+| Gene calls within the common universe | CASE eGene | CASE non-call |
 |---|---:|---:|
 | CIGMA eGene | 316 | 0 |
-| CIGMA without an eGene call | 3,524 | 4,445 |
+| CIGMA non-call | 3,524 | 4,445 |
 
-The report records 3,840 CASE eGenes in that universe. The table is reconstructed from these reported totals: $3840-316=3524$, and $8285-3840=4445$. Among CIGMA non-calls, CASE identifies $3524/7969=44.2\%$ as eGenes.
+Thus CASE recovered all 316 CIGMA gene calls and identified an additional 3,524 genes. Among CASE eGenes within the CIGMA categories, approximately **76% of cs-eGenes** and **97% of shared-only eGenes** had credible sets in all four matched lineages.
 
-This is **agreement between discovery lists**. Different preprocessing, donor eligibility, expression scales, and testing targets prevent interpreting the table as a controlled estimate of either method's precision or power. The original per-gene comparison tables remain necessary for a fresh audit; this entry transcribes the report and checks its arithmetic.
+The overlap concerns detection. CIGMA specificity concerns effect heterogeneity. For example,
 
-Among CASE eGenes in the respective CIGMA groups, the report gives credible sets in all four matched lineages for approximately **76% of cs-eGenes** and **97% of shared-only eGenes**. A gene can have supported effects in every lineage and still show substantial differences in effect magnitude. Finer T-cell or B-cell subtype differences are also collapsed by this alignment. Presence across broad lineages and homogeneity of effects answer different questions.
+$$
+(\beta_{j1},\beta_{j2},\beta_{j3})=(0.1,0.3,0.7)
+$$
 
-## 6. Downstream biological interpretation
+is compatible with activity in all three types and substantial differences in magnitude. Donor eligibility, cell grouping, expression normalization, and significance criteria differ between the compared pipelines, so these counts describe concordance rather than a controlled power benchmark.
 
-Both approaches connect regulatory variation to biological annotations and disease genetics, using different starting objects.
+## 5. Potential limitations of each model
 
-| Starting object | Downstream comparison | Interpretation |
+| Issue | CIGMA | CASE |
 |---|---|---|
-| CIGMA gene-level specificity | Gene properties and mapped genomic annotations | Which kinds of genes show heterogeneous genetic regulation? |
-| CASE eGenes or variant sets | Cell markers, pathways, functional SNP annotations | Which biological contexts support the fine-mapped signals? |
-| SNP annotations and GWAS summary statistics | Stratified LD-score regression | Is trait heritability concentrated in an annotation? |
-| Matched eQTL and GWAS locus data | Additional colocalization analysis | Is a shared causal signal supported at this locus? |
+| Inferential target | Estimates aggregate genetic variance; causal SNP identities remain unresolved | Prioritizes SNP–cell-type effects; strong LD can leave several variants plausible |
+| Effect architecture | Gaussian variance model averages over the retained SNP set | Sparse mixture depends on the available sharing patterns and their estimation |
+| Weak signals | Gene-level variance estimates can be imprecise | Low PIP or a missing set may reflect limited power, especially in rare types |
+| Cellular resolution | Pseudobulk averages over within-type state variation | Cell-type summaries also average over within-type states |
+| Dependence and measurement | Requires appropriate residual and sampling covariance | Requires aligned LD, sample-overlap information, and sampling covariance |
+| Scientific interpretation | Specific variance supports heterogeneous genetic regulation | PIPs and sets provide model-based causal candidates; functional validation remains a separate step |
 
-CASE reported enhancer enrichment for cell-type-specific variants. Its eQTL annotations were heritability-enriched for five autoimmune diseases versus all SNPs and marginal eQTLs; differences versus SuSiE/mvSuSiE were statistically nonsignificant. Universally shared sets generally had the highest enrichment in its sharing-category comparison. [CASE Figure 6 and results](https://www.nature.com/articles/s41467-026-72176-3)
+For both approaches, sample size, expression scale, and annotation choices affect interpretation. A comparison of significant lists alone combines these influences with differences between the models.
 
-CIGMA reported enrichment of cell-type-specific regulation in complex-trait heritability. [CIGMA paper](https://www.nature.com/articles/s41586-026-10577-6) These observations use different annotations, selection rules, and estimands. Comparing them requires matching the SNP universe, gene-to-SNP mapping, expression scale, and power-related filters.
+## 6. Downstream biological interpretation: construction and models
 
-For this diary, the local overlap supports a precise interpretation: **a heterogeneous gene-level genetic signal can coexist with fine-mapping support across several lineages**. The next level of evidence is the aligned effect profile and its uncertainty for each locus.
+<figure class="study-figure study-figure-wide">
+<a href="{{base}}/assets/case-study/downstream-process.svg"><img src="{{base}}/assets/case-study/downstream-process.svg" alt="Three downstream routes: gene-set enrichment, SNP-annotation heritability enrichment, and locus-level colocalization"></a>
+<figcaption>Figure 3. Three analysis routes from regulatory results to biological evidence. Colocalization is a possible locus-level follow-up; it requires an additional model.</figcaption>
+</figure>
+
+### A. Gene calls → marker or pathway enrichment
+
+Define a tested-gene universe $\mathcal G$, a selected set $D$ (for example, cell-type-specific eGenes), and a marker/pathway set $F$. Construct
+
+$$
+\begin{array}{c|cc}
+& F & \mathcal G\setminus F\\\hline
+D & a & b\\
+\mathcal G\setminus D & c & d
+\end{array}
+\qquad
+\operatorname{OR}=\frac{ad}{bc}.
+$$
+
+Fisher's exact test assesses enrichment conditional on the margins; adjust across tested pathways or cell types. The universe should contain eligible tested genes. Matching on expression, cell abundance, or other detection-related properties can assess sensitivity to selection effects.
+
+### B. SNP sets → annotations → trait-heritability enrichment
+
+For a binary SNP annotation $A$, let $a_A(k)=1$ if SNP $k$ belongs to the selected category. For CASE, one possible category is the union of credible-set variants in selected cell types. For CIGMA, a declared gene-to-SNP mapping is needed to translate gene-level outputs into genomic annotations.
+
+Construct annotation-specific LD scores and fit the stratified regression
+
+$$
+\ell_A(j)=\sum_k r_{jk}^2a_A(k),\qquad
+E[\chi_j^2]\approx b+N_{\rm GWAS}\sum_A\tau_A\ell_A(j).
+$$
+
+Here $b$ is the intercept, $\tau_A$ is the annotation's conditional contribution, and the fitted model includes relevant baseline annotations. Report
+
+$$
+\operatorname{Enrichment}(A)=
+\frac{h_A^2/h^2}{M_A/M_{\rm all}}.
+$$
+
+This compares the annotation's heritability share with its SNP share. Overlapping annotations require joint modeling; $\tau_A$ and enrichment are different summaries. Use ancestry-compatible LD and uncertainty estimates. [S-LDSC documentation](https://github.com/bulik/ldsc/wiki/Partitioned-Heritability)
+
+**Published findings.** CASE reported enhancer enrichment for cell-type-specific variants and autoimmune-trait heritability enrichment relative to all SNPs and marginal eQTLs. Differences versus SuSiE/mvSuSiE were statistically nonsignificant; universally shared categories generally showed the highest enrichment in its sharing comparison. [CASE Figure 6](https://www.nature.com/articles/s41467-026-72176-3) CIGMA reported enrichment of cell-type-specific regulation in complex-trait heritability. [CIGMA](https://www.nature.com/articles/s41586-026-10577-6) The annotation definitions and selection rules differ, motivating a harmonized comparison.
+
+### C. eQTL locus + GWAS locus → colocalization
+
+After allele harmonization and compatible fine-mapping, compare hypotheses
+
+$$
+H_{\rm shared}:\text{a shared causal variant},\qquad
+H_{\rm distinct}:\text{different causal variants}.
+$$
+
+In a simplified one-causal-variant-per-trait calculation, with variant Bayes factors $\mathrm{BF}^{E}_j$ and $\mathrm{BF}^{G}_j$ and uniform location weights, the relative evidence contains
+
+$$
+\mathcal L_{\rm shared}\propto\sum_j\mathrm{BF}^{E}_j\mathrm{BF}^{G}_j,
+\qquad
+\mathcal L_{\rm distinct}\propto\sum_{j\ne k}\mathrm{BF}^{E}_j\mathrm{BF}^{G}_k.
+$$
+
+Posterior probabilities also require hypothesis priors, location-weight normalization, and the remaining association hypotheses. Multiple signals require a suitable multi-signal analysis. An intersection of credible sets can prioritize a locus for this calculation; colocalization quantifies the evidence for sharing, while mediation requires further assumptions. [Coloc model and hypotheses](https://chr1swallace.github.io/coloc/articles/a03_enumeration.html)
 
 ---
 
-*Study record: September 30, 2026. Equations organized from my handwritten CASE notes; primary references are Chen & Dahl's CIGMA paper and Lin et al.'s CASE paper. Local overlap numbers come from my September 28 progress report. The LD figure is an original, executed teaching calculation. Package interface and utility code inspected at commit `13f4fc8`.*
+**Data and computation.** The gene-overlap counts are transcribed from the September 28 OneK1K progress report and have not been re-estimated here. The LD and credible-set diagrams are teaching examples. [Figure-generation code]({{base}}/assets/case-study/make_diagrams.py). CASE source inspection refers to commit `13f4fc8`; no new OneK1K CASE fit is reported.
