@@ -265,7 +265,7 @@ $$
 Integrating over those random coefficients gives
 
 $$
-\operatorname{Cov}(a_{igc},a_{kgd}\mid Z)
+\mathrm{Cov}(a_{igc},a_{kgd}\mid Z)
 =K^{(g)}_{ik}
 \left[
 \sigma^{2}_{g,\mathrm{shared}}
