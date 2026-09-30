@@ -234,9 +234,9 @@ $$
 At steady state, under these simplifying assumptions,
 
 $$
-\lambda^*_{icsg}=\frac{k_{icsg}}{d_{icsg}},
+\lambda^{*}_{icsg}=\frac{k_{icsg}}{d_{icsg}},
 \qquad
-E[C_{icsg}]=q_{ics}\lambda^*_{icsg}.
+E[C_{icsg}]=q_{ics}\lambda^{*}_{icsg}.
 $$
 
 The second equation uses the idealized detection model from Section 3. More production, slower degradation, or better detection can each increase the expected observed count. They are different mechanisms. Even with the same underlying parameters, realized counts fluctuate. RNA stability is itself a regulated component of expression. [RNA stability and posttranscriptional control](https://www.ncbi.nlm.nih.gov/books/NBK26890/)
