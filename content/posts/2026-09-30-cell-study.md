@@ -268,7 +268,7 @@ $$
 \operatorname{Cov}(a_{igc},a_{kgd}\mid Z)
 =K^{(g)}_{ik}
 \left[
-\sigma^2_{g,\mathrm{shared}}
+\sigma^{2}_{g,\mathrm{shared}}
 +\mathbf 1(c=d)v_{gc}
 \right].
 $$
