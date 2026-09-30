@@ -12,9 +12,9 @@
 .prose details[open] summary { margin-bottom: 1rem; }
 .prose .arithmatex { overflow-x: auto; }
 
-/* Compact study illustrations; the linked original remains available. */
+/* Readable study illustrations, with linked full-resolution originals. */
 .prose img { max-width: 100%; height: auto; }
-.prose .study-figure { max-width: 380px; margin: 24px auto; text-align: center; }
-.prose .study-figure img { display: block; max-height: 480px; width: auto; margin: auto; object-fit: contain; }
-.prose .study-figure-wide { max-width: 480px; }
+.prose .study-figure { max-width: 620px; margin: 28px auto; text-align: center; }
+.prose .study-figure img { display: block; width: 100%; height: auto; margin: auto; }
+.prose .study-figure-wide { max-width: 680px; }
 .prose .study-figure figcaption { margin-top: 10px; font-size: 12px; line-height: 1.6; color: var(--muted); text-align: left; }

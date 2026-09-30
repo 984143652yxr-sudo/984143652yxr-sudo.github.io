@@ -5,7 +5,7 @@
   "date": "2026-09-30",
   "date_label": "September 30, 2026",
   "status": "Study note",
-  "reading_time": "16 min read",
+  "reading_time": "13 min read",
   "summary": "A statistical map of RNA measurement, shared genetic effects, regulatory kinetics, and cell-state abundance—including our GeNA study."
 }
 ---
@@ -13,6 +13,8 @@
 ## Starting question
 
 How does genetic variation change RNA expression, and how does that effect depend on the cell? I want to follow **DNA → regulation → RNA production and processing → RNA abundance → measured count**, specifying a response and a model at each step.
+
+The page follows three questions: **what is measured** (Section 1), **how expression associates with genotype** (Section 2), and **which regulatory processes or cell states could explain the variation** (Section 3).
 
 The equations below hold **one gene fixed** unless stated otherwise. Subscripts appear when we compare donors or cell types. This keeps the biological object and the statistical unit visible.
 
@@ -89,13 +91,7 @@ $$
 
 $B$ is a pseudobulk raw count, analyzed with an appropriate library-size adjustment. $Y$ is mean transformed expression. A group containing counts 1 and 3 has $B=4$; its $Y$ also depends on the cells' library sizes. The selected summary fixes the interpretation of a regression coefficient.
 
-For approximately independent sampled cells within a group, finite-cell uncertainty in the mean can be estimated by
-
-$$
-\widehat\delta_{ic}=\frac{\text{sample variance of }X\text{ in the group}}{n_{ic}},\qquad n_{ic}>1.
-$$
-
-Correlated sampling or batch structure calls for a richer variance estimate. More cells improve each donor's measurement; more donors supply additional genetic observations.
+More cells improve each donor's expression measurement; more donors supply additional genetic observations.
 
 ## 2. Genotype, eQTLs, and shared regulatory effects
 
@@ -153,26 +149,21 @@ $$
 
 Genetically similar donors have correlated genetic contributions. Within a type, the covariance includes shared and specific components; across types, the shared component remains.
 
-One full teaching model adds independent, zero-mean genetic, donor-residual, and finite-cell sampling components:
+The expression model combines this genetic contribution with covariates and a residual:
 
 $$
-Y_{ic}=\mu_c+W_i^\top\gamma_c+a_{ic}+r_{ic}+e_{ic},
+Y_{ic}=\mu_c+W_i^\top\gamma_c+a_{ic}+r_{ic}.
 $$
 
-$$
-\operatorname{Cov}(Y_{ic},Y_{\ell d}\mid Z,W)
-=K_{i\ell}\left[\sigma^2_{\rm shared}+\mathbf1(c=d)v_c\right]
-+\mathbf1(i=\ell)R_{cd}
-+\mathbf1(i=\ell,c=d)\delta_{ic}.
-$$
+Here $r_{ic}$ collects remaining biological and measurement variation. Residuals from different cell types of the same donor can be correlated; a residual covariance matrix $R$ represents that dependence. The genetic component is distinguished through the relatedness matrix $K$, which connects genetically similar donors.
 
-$R$ describes residual covariance across types within a donor; $\delta$ describes uncertainty from sampling cells. The distinction comes from the covariance patterns: genetic similarity can connect different donors, while the residual term here connects measurements within a donor. Estimation needs enough information to distinguish those patterns.
-
-This construction restores the bridge to **CIGMA's shared/specific genetic-variance question**. It is a pedagogical specification; the [CIGMA implementation](https://github.com/Minhui-Chen/CIGMA) and [replication diary]({{base}}/diary/cigma-onek1k/) supply the method-specific choices.
+This is a teaching construction for **CIGMA's shared/specific genetic-variance question**. The [CIGMA implementation](https://github.com/Minhui-Chen/CIGMA) and [replication diary]({{base}}/diary/cigma-onek1k/) give the method-specific specification.
 
 ## 3. Regulatory processes and cell-state models
 
-At the same genotype, cells can differ in chromatin accessibility, regulatory proteins, signals, and RNA lifetime. These processes can also mediate genetic effects. The models below make their responses, parameters, and required measurements explicit.
+At the same genotype, cells can differ in chromatin accessibility, regulatory proteins, signals, and RNA lifetime. These processes can also mediate genetic effects.
+
+Read Figure 3 from regulation to measurement: **regulators change RNA production; processing and degradation change the RNA present; detection produces the observed count**. The first five models below describe parts of this process. The final two ask how expression and cell-state abundance associate with genotype.
 
 <figure class="study-figure">
 <a href="{{base}}/assets/cell-study/03-fixed-genotype-mechanisms.png"><img src="{{base}}/assets/cell-study/03-fixed-genotype-mechanisms.png" alt="DNA accessibility, regulatory proteins, signals and RNA degradation alter abundance; capture alters measured counts"></a>
@@ -181,18 +172,22 @@ At the same genotype, cells can differ in chromatin accessibility, regulatory pr
 
 ### 3.1 Production and degradation: which rate changed?
 
-Let $\lambda(t)$ be expected RNA abundance, $a$ the production rate, and $d$ the per-molecule degradation rate:
+**Process:** RNA is produced and removed. **Quantity modeled:** the expected number of molecules of one gene in a cell.
+
+Let $\lambda(t)$ be expected abundance, $a$ the production rate (molecules per unit time), and $d$ the per-molecule degradation rate (per unit time):
 
 $$
 \frac{d\lambda}{dt}=a-d\lambda,\qquad
 \lambda_{\rm equilibrium}=a/d,\qquad E[C]=qa/d.
 $$
 
-Increasing production, slowing degradation, or improving detection each raises the expected count. A snapshot mean identifies a combination of rates. Time-resolved measurements help distinguish them.
+At equilibrium, production balances removal. Doubling $a$ doubles expected abundance; doubling $d$ halves it. Increasing detection $q$ raises the expected measured count while leaving the RNA present in the cell unchanged. A snapshot mean identifies a combination of rates. Time-resolved measurements help distinguish them.
 
 ### 3.2 Transcriptional bursts: a switching promoter
 
-The telegraph model makes production stochastic:
+**Process:** a promoter, the DNA region controlling transcription initiation, switches between inactive and active states. **Data:** a distribution of counts across cells.
+
+The telegraph model represents that switching and the resulting molecule counts:
 
 $$
 \mathrm{OFF}\underset{k_{\rm off}}{\overset{k_{\rm on}}{\rightleftharpoons}}\mathrm{ON},
@@ -209,13 +204,13 @@ E[M]=\frac{a}{d}\frac{k_{\rm on}}{k_{\rm on}+k_{\rm off}},\qquad
 C\mid M,q\sim\operatorname{Binomial}(M,q).
 $$
 
-The ON fraction controls how often synthesis is available; $a$ controls production while active; $d$ controls RNA lifetime. Counts across cells inform these parameters through their distribution. [Tang et al. (2023)](https://doi.org/10.1093/bioinformatics/btad395) incorporate cell size and capture into burst-kinetic inference using likelihood and moment methods. Their model motivates adjusting the effective synthesis scale for both. Absolute rates require a time reference or externally specified degradation scale.
-
-A possible genotype extension is $\log k_{\rm on}=b_0+b_GG+b_SS$. It asks whether genotype and state predict promoter activation. This is a proposed regression on a kinetic parameter; identifiability requires stronger data and assumptions than a mean-expression eQTL.
+$k_{\rm on}$ and $k_{\rm off}$ are switching rates. The ratio $k_{\rm on}/(k_{\rm on}+k_{\rm off})$ is the long-run fraction of time active; $a$ controls production while active; $d$ controls RNA lifetime. Counts across cells inform these parameters through their distribution. [Tang et al. (2023)](https://doi.org/10.1093/bioinformatics/btad395) incorporate cell size and capture into burst-kinetic inference using likelihood and moment methods. Their model motivates adjusting the effective synthesis scale for both. Absolute rates require a time reference or externally specified degradation scale.
 
 ### 3.3 Regulatory proteins: SCENIC
 
-For one target gene across cells, the prediction step can be represented schematically as
+**Process:** transcription factors bind regulatory DNA and influence target-gene transcription. **Data:** expression across cells plus DNA-motif reference information.
+
+For one target gene, the prediction step can be represented schematically as
 
 $$
 X=f(T_1,\ldots,T_p)+\epsilon,
@@ -227,18 +222,22 @@ The statistical target is a candidate regulatory network and its activity across
 
 ### 3.4 RNA processing and changing state: scVelo
 
-With separate unspliced ($u$) and spliced ($s$) RNA measurements, a two-compartment model is
+**Process:** newly transcribed RNA is spliced into mature RNA, which later degrades. **Data:** separate unspliced and spliced measurements from cells spanning a transition.
+
+Let $u$ and $s$ denote unspliced and spliced RNA abundance. The two-compartment model is
 
 $$
 \frac{du}{dt}=a(t)-bu,\qquad
 \frac{ds}{dt}=bu-ds.
 $$
 
-Transcription adds unspliced RNA at rate $a(t)$; splicing transfers it at rate $bu$; mature RNA decays at rate $ds$. Thus $bu-ds$ describes the modeled direction of mature-RNA change.
+Here $b$ is the splicing rate and $d$ the degradation rate. Transcription adds unspliced RNA at rate $a(t)$; splicing transfers it at rate $bu$; mature RNA decays at rate $ds$. Thus $bu-ds$ describes the modeled direction of mature-RNA change.
 
 [scVelo, Bergen et al. (2020)](https://doi.org/10.1038/s41587-020-0591-3) fits reaction rates and latent cell times/states through likelihood-based expectation–maximization. It uses cells spanning a trajectory and distinct spliced/unspliced layers. The inferred direction depends on the kinetic model, and physical time needs calibration. [Authors' equations and fitting procedure](https://scvelo.readthedocs.io/en/latest/about.html)
 
 ### 3.5 A measured time interval: new RNA
+
+**Process:** label RNA produced during a known interval and measure how much new RNA accumulates.
 
 [NASC-seq2, Ramsköld et al. (2024)](https://www.nature.com/articles/s41556-024-01486-9) labels newly synthesized RNA during a known interval. A mixture model distinguishes labeling-related base conversions from background errors; new-RNA counts and degradation information support burst inference.
 
@@ -252,7 +251,9 @@ This follows from the production–decay equation. The known interval $t$ suppli
 
 ### 3.6 Expression within a cell state: a genotype-by-state model
 
-A continuous state $S$ can represent activation or progression along a cell trajectory. For one gene, a teaching count model for cell $k$ from donor $i$ is
+**Question:** does a SNP have a stronger expression effect in activated cells? **Data:** gene counts, donor genotypes, and cell-state measurements.
+
+A cell type is a broad identity, such as a T cell. A continuous state $S$ can describe activation or progression within that type. For one gene, a teaching count model for cell $k$ from donor $i$ is
 
 $$
 C_{ik}\sim\operatorname{NB}(\mu_{ik},\phi),
@@ -263,27 +264,44 @@ $$
 +G_i h(S_{ik})+W_{ik}^{\top}\gamma+u_i.
 $$
 
-The count distribution is conditional on the predictors and donor effect. Take $u_i\sim N(0,\tau^2)$. $L>0$ supplies a library-size offset, $f$ describes baseline state dependence, $h$ describes how the genetic effect changes with state, and $u_i$ accounts for repeated cells from a donor. The genotype effect on the log-mean scale at state $s$ is $\beta+h(s)$. Taking $h(s)=\theta s$ gives an ordinary genotype-by-state interaction.
+Read the mean model term by term:
+
+| Term | Role |
+|---|---|
+| $\log L$ | Adjust for the cell's library size, with $L>0$ |
+| $\beta G$ | Baseline genotype association |
+| $f(S)$ | Expression changes with state |
+| $G h(S)$ | The genotype effect changes with state |
+| $W^\top\gamma$ | Adjust for measured covariates |
+| $u_i\sim N(0,\tau^2)$ | Account for cells sharing a donor |
+
+The count distribution is conditional on these predictors and the donor effect. At state $s$, the genetic effect on the log-mean scale is $\beta+h(s)$. For $h(s)=\theta s$, moving from state 0 to state 1 changes that effect from $\beta$ to $\beta+\theta$.
 
 The response is **one gene's expression conditional on state**. State-dependent eQTL studies motivate this question; see [Nathan et al. (2022)](https://www.nature.com/articles/s41586-022-04713-1). The equation above is an adaptable negative-binomial formulation. State estimates derived from expression require care about target-gene leakage and uncertainty; donor-level validation and sensitivity analyses help assess this.
 
 ### 3.7 GeNA: genotype and the abundance of cell states
 
-Our **OneK1K → GeNA study notebook** uses a different response: each donor's distribution of cells across transcriptional neighborhoods. A neighborhood is a local region of a cell-state graph. The sequence is **cell expression → cell graph → donor neighborhood abundances → abundance PCs → genotype association**. [Rumker et al. (2024)](https://doi.org/10.1038/s41588-024-01909-1)
+**Question:** do donors with different genotypes have different proportions of cells in particular states?
+
+Our **OneK1K → GeNA study notebook** models each donor's distribution of cells across transcriptional neighborhoods. A neighborhood is a local region of a cell-state graph. The sequence is **cell expression → cell graph → donor neighborhood abundances → abundance PCs → genotype association**. [Rumker et al. (2024)](https://doi.org/10.1038/s41588-024-01909-1)
 
 <figure class="study-figure study-figure-wide">
 <a href="{{base}}/assets/GeNA_understanding.webp"><img src="{{base}}/assets/GeNA_understanding.webp" alt="GeNA workflow from cell-state neighborhoods to donor abundance principal components and genetic association"></a>
 <figcaption>Figure 4. GeNA overview. Source: Rumker et al., Nature Genetics (2024), Figure 1; open the linked paper for its full caption.</figcaption>
 </figure>
 
-Let $w_{km}$ be the soft contribution of cell $k$ to neighborhood $m$. A compact representation of the donor-by-neighborhood abundance matrix is
+**Step 1 — describe each donor's cell distribution.** Let $w_{km}$ be the soft contribution of cell $k$ to neighborhood $m$. A compact representation of the donor-by-neighborhood abundance matrix is
 
 $$
 Q_{im}=\frac{1}{n_i}\sum_{k\in\text{donor }i}w_{km},\qquad
 \widetilde Q=UDV^\top.
 $$
 
-Our tutorial constructs these weights through graph diffusion, then applies neighborhood QC and covariate/batch adjustment before the SVD. $U$ contains unit-length donor PC vectors. For one tested SNP, the source workflow regresses each retained PC on dosage:
+The entry $Q_{im}$ summarizes donor $i$'s relative abundance around neighborhood $m$. Our tutorial constructs the weights through graph diffusion.
+
+**Step 2 — summarize abundance patterns.** Neighborhood QC and covariate/batch adjustment produce $\widetilde Q$. Its SVD gives donor PC vectors in $U$: each column represents a pattern of abundance differences across donors.
+
+**Step 3 — test genotype association.** For one SNP, regress each retained PC on dosage:
 
 $$
 U_{ir}=a_r+b_rG_i+e_{ir},\qquad
@@ -295,7 +313,7 @@ X(k)=\sum_{r=1}^{k}T_r^2,\qquad
 p(k)\approx\Pr\{\chi_k^2\ge X(k)\}.
 $$
 
-The joint test asks whether genotype associates with the abundance profile. Our inspected implementation adjusts the NAM before PCA and fits these forward regressions without extra covariates. A sensitivity analysis can explicitly adjust both genotype and phenotype. Calibration depends on the design; PC orthogonality alone supplies limited distributional guarantees.
+$b_r$ is the association with abundance PC $r$. Summing the squared standardized coefficients combines evidence across the first $k$ PCs. The joint test asks whether genotype associates with the abundance profile. Our inspected implementation adjusts the NAM before PCA and fits these forward regressions without extra covariates. A sensitivity analysis can explicitly adjust both genotype and phenotype. Calibration depends on the design; PC orthogonality alone supplies limited distributional guarantees.
 
 For $J$ prespecified candidate values of $k$, the source's selection correction is
 
@@ -304,33 +322,3 @@ p_{\rm GeNA}=1-\left(1-\min_k p(k)\right)^J.
 $$
 
 The nested tests share PCs, so this analytical procedure benefits from donor-level null checks. A neighborhood map shows where abundance increases or decreases with genotype. The denominator matters: within-NK analysis concerns relative NK states, while a PBMC-wide analysis concerns the wider mixture. [GeNA source and joint test](https://github.com/immunogenomics/GeNA)
-
-### 3.8 Connecting our two state questions
-
-Our notebook's exploratory extension separates **expression at a given state** from **how frequently that state occurs**. Let $m_g(s)$ be mean expression at genotype $g$ and state $s$, and $F_g$ the state distribution. Then
-
-$$
-\bar Y_g=\int m_g(s)\,dF_g(s).
-$$
-
-For a 0-to-1 genotype contrast, adding and subtracting $\int m_1\,dF_0$ gives
-
-$$
-\bar Y_1-\bar Y_0
-=\underbrace{\int[m_1(s)-m_0(s)]\,dF_0(s)}_{\text{within-state expression}}
-+\underbrace{\int m_1(s)\,d[F_1(s)-F_0(s)]}_{\text{state composition}}.
-$$
-
-This is a descriptive decomposition with genotype 0 as the reference distribution. The state-interaction model addresses the first ingredient; GeNA addresses associations with the second. Both mechanisms can contribute to a donor-level expression difference. Estimation requires comparable states across donors, covariate adjustment, and uncertainty assessed at the donor level. This decomposition is our tutorial extension, separate from GeNA's published association test.
-
-## Questions for my next investigation
-
-| Question | Response and starting model |
-|---|---|
-| What is shared across cell types? | Donor–type expression; genetic variance components |
-| Does the SNP effect depend on activation? | Gene count conditional on state; genotype-by-state model |
-| Does genotype shift state composition? | Donor neighborhood abundances; GeNA |
-| Does regulation change production or lifetime? | RNA kinetics; burst, splicing, or labeling models |
-| Which part can the available assay identify? | Observation model plus the measurements required by each mechanism |
-
-For the OneK1K work, my next step is to list the available RNA layers, state representations, donor covariates, and detection information. That determines which regulatory parameters the data can support.
