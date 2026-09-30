@@ -28,6 +28,6 @@ A replication is a sequence of decisions about data, models, and evidence. I wan
 - Track how filtering changes the analysis population.
 - Diagnose calibration before interpreting biological enrichment.
 
-**First case study:** the [workflow and debugging notes]({{base}}/diary/cigma-onek1k/#what-the-debugging-taught-me) from the OneK1K replication.
+**First case study:** the [workflow notes]({{base}}/diary/cigma-onek1k/) from the OneK1K replication.
 
 </section>

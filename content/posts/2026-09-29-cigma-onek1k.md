@@ -6,7 +6,7 @@
   "date_label": "September 29, 2026",
   "status": "Working draft",
   "reading_time": "7 min read",
-  "summary": "From single-cell counts to shared and cell-type-specific genetic variance: a record of the workflow, debugging lessons, and questions still open."
+  "summary": "From single-cell counts to shared and cell-type-specific genetic variance: a record of the workflow and questions still open."
 }
 ---
 
@@ -85,19 +85,6 @@ For interpretation, I keep three distinctions visible:
 - **Specific genetic regulation versus differential expression:** variation in genetic effects and variation in average expression ask different questions.
 
 I also keep raw variance-component estimates. An unconstrained method-of-moments estimate can be negative; truncating every such estimate to zero would change the summary. Ratios need separately stated denominator checks.
-
-## What the debugging taught me
-
-The September 28 report records several concrete failures and fixes. These are worth keeping in the diary because they explain why the validation steps exist.
-
-| Recorded problem | Lesson for the next run |
-|---|---|
-| Variant-ID shell escaping caused different alleles to share an ID | Inspect a few generated IDs before running duplicate removal |
-| The chunk runner did not parse the PSAM `#IID` header | Validate sample-file parsing in the pilot |
-| A pilot paired one gene’s expression with another gene’s genotype matrix | Tie every fit to a checked stable gene ID |
-| A covariate was missing and a PC job failed on relative paths | Audit the completed covariate matrix and use explicit input paths |
-
-These checks belong before the full run. They are not merely cosmetic cleanup after the results arrive.
 
 ## A preliminary checkpoint
 
