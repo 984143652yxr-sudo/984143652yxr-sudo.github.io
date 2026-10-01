@@ -50,15 +50,15 @@ for y,(a,b,c) in zip([.72,.39,.06],rows):
 ax.text(.50,.985,'Input → statistical construction → interpretable output',ha='center',weight='bold',fontsize=13)
 save(fig,'downstream-process')
 print('Wrote three diagrams; LD algebra checked.')
-# Unified fixed-gene model: same effect matrix, different distributions and targets.
+# Shared data notation, followed by separate observation models and inference.
 fig,ax=plt.subplots(figsize=(10,5));ax.set(xlim=(0,1),ylim=(0,1));ax.axis('off')
-box(ax,.23,.81,.54,.16,'One gene: Y = X B + E\nB: SNP rows × cell-type columns',fs=12)
+box(ax,.23,.81,.54,.16,'One gene · donors · cell types · SNPs\nB: SNP rows × cell-type columns',fs=12)
 arrow(ax,(.39,.80),(.24,.69));arrow(ax,(.61,.80),(.76,.69))
-box(ax,.025,.49,.43,.19,'CIGMA\nOne structured Gaussian for each SNP row',fs=11)
-box(ax,.545,.49,.43,.19,'CASE\nSparse mixture for each SNP row',fs=11)
+box(ax,.025,.49,.43,.19,'CIGMA: pseudobulk expression\nGenetic + donor + cell-sampling variation',fs=11)
+box(ax,.545,.49,.43,.19,'CASE: marginal association statistics\nRegression residuals + donor overlap',fs=11)
 arrow(ax,(.24,.48),(.24,.40));arrow(ax,(.76,.48),(.76,.40))
-box(ax,.025,.23,.43,.16,'Integrate B → expression covariance\nK: donor similarity',fill='#f7f8fa',fs=11)
-box(ax,.545,.23,.43,.16,'Infer B → SNP-level posterior\nR: correlation between SNPs',fill='#f7f8fa',fs=11)
+box(ax,.025,.23,.43,.16,'Gaussian effect components\nFit covariance using K and sampling D',fill='#f7f8fa',fs=11)
+box(ax,.545,.23,.43,.16,'Mixture of sharing patterns\nInfer B using SNP LD matrix R',fill='#f7f8fa',fs=11)
 arrow(ax,(.24,.22),(.24,.15));arrow(ax,(.76,.22),(.76,.15))
 box(ax,.025,.025,.43,.125,'Shared / specific genetic variance\nGene-level heterogeneity',fs=11)
 box(ax,.545,.025,.43,.125,'PIPs → credible sets → eGenes\nVariant and cell-type support',fs=11)
@@ -71,4 +71,18 @@ K=X@X.T/4
 D=np.kron(np.eye(3),X)
 assert np.allclose(D@np.kron(Omega/4,np.eye(4))@D.T,np.kron(Omega,K))
 assert np.allclose(.1*(10*Omega/4),Omega/4)
-print('Unified covariance identity and mixture second moments verified.')
+# Check the explicit residual covariance using cell-type column stacking.
+Omega_e=.2*np.ones((3,3))+np.diag([.05,.07,.09])
+delta=np.linspace(.01,.15,15)
+full=np.kron(Omega,K)+np.kron(Omega_e,np.eye(5))+np.diag(delta)
+for c in range(3):
+ for d in range(3):
+  for i in range(5):
+   for ell in range(5):
+    expected=K[i,ell]*Omega[c,d]+(i==ell)*Omega_e[c,d]
+    if c==d and i==ell: expected+=delta[c*5+i]
+    assert np.isclose(full[c*5+i,d*5+ell],expected)
+U=np.array([[.04,0,.03],[0,0,0],[.03,0,.09]])
+assert np.linalg.eigvalsh(U).min()>=-1e-12
+assert np.isclose(U[0,2]/np.sqrt(U[0,0]*U[2,2]),.5)
+print('Genetic/residual covariance identities and sharing-pattern example verified.')

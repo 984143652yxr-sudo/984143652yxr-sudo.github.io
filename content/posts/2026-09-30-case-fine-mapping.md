@@ -5,247 +5,273 @@
   "date": "2026-09-30",
   "date_label": "September 30, 2026",
   "status": "Statistical study note",
-  "reading_time": "17 min read",
-  "summary": "One donor-by-cell-type regression, two distributions for SNP effects: covariance estimation with CIGMA and posterior fine-mapping with CASE."
+  "reading_time": "20 min read",
+  "summary": "Shared genetic-effect notation, followed by the full CIGMA variance model and CASE fine-mapping model: residuals, priors, inference, and scientific targets."
 }
 ---
 
-## 1. One regression framework for a fixed gene
+## 1. Shared notation: one gene, donors, cell types, and SNP effects
 
-Both methods start from **donor-by-cell-type expression and cis-SNP genotypes for one gene**. Cells are aggregated within donor and cell type; the genetic observation is a donor. Fix the gene and suppress its index throughout.
+Fix one gene throughout. Each expression observation summarizes cells from **one donor and one cell type**. Genotype varies between donors; a donor's inherited genotype is shared across their cell types.
 
-After the chosen expression transformation and appropriate covariate adjustment, write
+| Symbol | Meaning |
+|---|---|
+| $i$, $c$, $j$ | Donor, cell type, and SNP indices |
+| $C$; $N$; $N_c$ | Number of cell types; total donors; donors observed in type $c$ |
+| $y_{ic}$ | Expression summary for this gene in donor $i$, type $c$, on the method's analysis scale |
+| $x_{ij}$ | Standardized genotype of donor $i$ at SNP $j$ |
+| $\beta_{jc}$ | Joint additive effect of SNP $j$ on expression in type $c$ |
+| $\beta_c$ | All included SNP effects in **one cell type**: a column vector |
+| $b_j$ | One SNP's effects across **all cell types**: a column vector of length $C$ |
+| $B$ | Effect matrix: **SNP rows × cell-type columns**, with $B_{jc}=\beta_{jc}$ |
 
-$$
-y_{ic}=\sum_{j=1}^{M}x_{ij}\beta_{jc}+e_{ic}.
-$$
-
-For a common set of $N$ donors measured in $C$ cell types,
-
-$$
-\boxed{Y=XB+E},\qquad
-Y\in\mathbb R^{N\times C},\quad
-X\in\mathbb R^{N\times M},\quad
-B\in\mathbb R^{M\times C}.
-$$
+The two views of the effect matrix are
 
 $$
-B=(\beta_1,\ldots,\beta_C)
-=\begin{pmatrix}
-\beta_{11}&\cdots&\beta_{1C}\\
-\vdots&\ddots&\vdots\\
-\beta_{M1}&\cdots&\beta_{MC}
-\end{pmatrix},\qquad
+B=(\beta_1,\ldots,\beta_C),\qquad
 b_j=(\beta_{j1},\ldots,\beta_{jC})^\top.
 $$
 
-**A column of $B$ contains all cis-SNP effects in one cell type. A row contains one SNP's effects across all cell types.** The column vector $b_j$ is that row transposed. Both CIGMA and CASE specify a distribution for these same SNP-effect vectors.
+Thus $\beta_c$ follows a column down the SNPs, while $b_j$ follows a row across cell types. A distribution for $b_j$ is a joint distribution for several effects, one per cell type.
 
-| Symbol | Meaning | Dimension |
-|---|---|---|
-| $Y$, $y_c$ | Donor-level expression across types; column for type $c$ | $N\times C$; $N\times1$ |
-| $X$ | Centered, standardized genotypes for retained cis SNPs | $N\times M$ |
-| $B$, $b_j$ | Joint SNP effects; one SNP's effect vector across types | $M\times C$; $C\times1$ |
-| $E$ | Remaining biological and measurement variation | $N\times C$ |
-| $K=XX^\top/M$ | Genetic similarity **between donors** | $N\times N$ |
-| $R=X^\top X/N$ | LD correlation **between SNPs** | $M\times M$ |
-| $\Omega$ | Aggregate genetic covariance across cell types | $C\times C$ |
-| $\widehat B$, $V$ | Marginal SNP associations; their across-type sampling covariance | $M\times C$; $C\times C$ |
-
-$K$ and $R$ summarize the same genotype matrix along different axes. This explains why a variance-component method uses donor relatedness while fine-mapping uses SNP LD.
-
-With different donor sets across types, use $y_c=X_c\beta_c+e_c$ and retain the observed donor identities. The balanced matrix form above is a common notation, rather than a requirement to discard incomplete donors. Expression normalization, covariate treatment, and residual specifications must still follow each method; identical symbols do not make their preprocessing identical.
+The notation identifies the biological quantities. Each method below specifies its own expression scale, variant set, residual model, and likelihood. Use $L$ for the number of SNPs in a CIGMA component and $M$ for the CASE cis region.
 
 <figure class="study-figure study-figure-wide">
-<a href="{{base}}/assets/case-study/unified-framework.svg"><img src="{{base}}/assets/case-study/unified-framework.svg" alt="A common donor-by-cell-type regression branches into CIGMA covariance estimation and CASE sparse posterior fine-mapping"></a>
-<figcaption>One response and effect matrix, two inferential targets. The Gaussian branch estimates aggregate covariance; the sparse-mixture branch retains SNP-level inclusion uncertainty.</figcaption>
+<a href="{{base}}/assets/case-study/unified-framework.svg"><img src="{{base}}/assets/case-study/unified-framework.svg" alt="Shared donor, cell-type, and SNP notation leads to a CIGMA pseudobulk covariance model and a CASE summary-statistic fine-mapping model"></a>
+<figcaption>The shared objects are donors, cell types, and genetic effects. The observation models and inferential targets are specified separately.</figcaption>
 </figure>
 
-## 2. The difference is the distribution of the same SNP-effect vector
+## 2. CIGMA: partition genetic and residual variation
 
-### CIGMA: one structured Gaussian distribution
+### Observation model
 
-In the shared-plus-specific construction,
-
-$$
-\beta_{jc}=\alpha_j+\eta_{jc},\qquad
-\alpha_j\sim N\left(0,\frac{\sigma^2_{\rm shared}}{M}\right),\qquad
-\eta_{jc}\sim N\left(0,\frac{v_c}{M}\right).
-$$
-
-Take the shared and specific coefficients independent across SNPs, and the specific coefficients independent across types. Then the entire SNP row has distribution
+For one genotype component containing $L$ SNPs, the shared-plus-specific model can be written
 
 $$
-\boxed{b_j\sim N_C(0,\Omega/M)},\qquad
-\Omega=\sigma^2_{\rm shared}\mathbf1\mathbf1^\top+
+\boxed{
+y_{ic}=m_{ic}
++\sum_{j=1}^{L}x_{ij}(\alpha_j+\eta_{jc})
++u_i+r_{ic}+\epsilon_{ic}.}
+$$
+
+Here $m_{ic}$ contains the cell-type mean and fitted covariate effects. The random terms have different roles:
+
+| Term | Role | Variance |
+|---|---|---|
+| $\alpha_j$ | SNP effect shared across types | $\sigma_g^2/L$ |
+| $\eta_{jc}$ | SNP's deviation in type $c$ | $v_c/L$ |
+| $u_i$ | Residual donor effect shared across types | $\sigma_e^2$ |
+| $r_{ic}$ | Residual donor effect specific to type $c$ | $w_c$ |
+| $\epsilon_{ic}$ | Sampling error in the cell-type mean | $\delta_{ic}$ |
+
+The first four are zero-mean Gaussian random effects in this construction. They are mutually independent, with independence across SNPs or donors as appropriate; the same $\alpha_j$ and $u_i$ recur across types. Residual donor variation includes unmodelled genetic and nongenetic contributions.
+
+For $n_{ic}$ cells, the sampling variance is estimated from within-group expression variation:
+
+$$
+\widehat\delta_{ic}=s_{ic}^{2}/n_{ic},
+$$
+
+where $s_{ic}^{2}$ is the sample variance across cells on the chosen expression scale. It enters as an estimated covariance offset. A donor represented by fewer cells can have a noisier expression mean. [CIGMA model and sampling correction](https://www.nature.com/articles/s41586-026-10577-6)
+
+### Genetic effects: a Gaussian column and correlated cell types
+
+Define $\beta_{jc}=\alpha_j+\eta_{jc}$. For one cell type,
+
+$$
+\alpha\sim N_L(0,\sigma_g^2 I_L/L),\qquad
+\eta_c\sim N_L(0,v_c I_L/L),
+$$
+
+$$
+\boxed{\beta_c\sim N_L\left(0,\frac{\sigma_g^2+v_c}{L}I_L\right).}
+$$
+
+Within this component, every SNP has the same **prior variance** in type $c$. Its realized effect can differ in size and sign. Across types, the columns share $\alpha$:
+
+$$
+\operatorname{Cov}(\beta_c,\beta_d)=\frac{\sigma_g^2}{L}I_L
+\quad(c\ne d).
+$$
+
+Equivalently, one SNP's row vector satisfies
+
+$$
+b_j\sim N_C(0,\Omega_g/L),\qquad
+\Omega_g=\sigma_g^2\mathbf1\mathbf1^\top+
 \operatorname{diag}(v_1,\ldots,v_C).
 $$
 
-For three types,
+These are column and row descriptions of the **same prior**. The variance $v_c$ can differ by type; there is no SNP-specific selection indicator in this model. The general covariance version of CIGMA replaces this structured $\Omega_g$ with a full covariance matrix.
+
+### Integrate the effects: the covariance that is fitted
+
+For a complete donor-by-type expression matrix, let $X$ be the $N\times L$ genotype matrix and $K=XX^\top/L$ its donor-relatedness matrix. Define
 
 $$
-\Omega=
-\begin{pmatrix}
-\sigma^2_{\rm shared}+v_1&\sigma^2_{\rm shared}&\sigma^2_{\rm shared}\\
-\sigma^2_{\rm shared}&\sigma^2_{\rm shared}+v_2&\sigma^2_{\rm shared}\\
-\sigma^2_{\rm shared}&\sigma^2_{\rm shared}&\sigma^2_{\rm shared}+v_3
-\end{pmatrix}.
+\Omega_e=\sigma_e^2\mathbf1\mathbf1^\top+
+\operatorname{diag}(w_1,\ldots,w_C),\qquad
+D=\operatorname{diag}\{\delta_{ic}\}.
 $$
 
-All retained cis SNPs enter the working random-effect distribution. Its parameters summarize genetic covariance. The Gaussian construction provides no SNP-specific activity indicator; this avoids requiring a list of individually detected variants before estimating aggregate variation. CIGMA also supports a more general cross-type genetic covariance than the shared-plus-diagonal form shown here. [CIGMA, Chen et al. (2026)](https://www.nature.com/articles/s41586-026-10577-6)
-
-### CASE: a mixture of sparse sharing patterns
-
-Keep the same $b_j$, but introduce a pattern indicator $z_j$:
+With expression stacked **by cell type**, the covariance is
 
 $$
-z_j\sim\operatorname{Categorical}(\pi_0,\ldots,\pi_T),\qquad
-\boxed{b_j\mid z_j=t\sim N_C(0,U_t)},\qquad U_0=0.
+\boxed{
+\Sigma_{\rm CIGMA}
+=\underbrace{\Omega_g\otimes K}_{\text{genetic}}
++\underbrace{\Omega_e\otimes I_N}_{\text{residual donor}}
++\underbrace{D}_{\text{cell sampling}}.}
 $$
 
-Each $U_t$ is a $C\times C$ covariance. Its zero rows and columns specify inactive cell types. Examples for three types are
+$D$ uses the same stacking order. Genetic covariance follows donor relatedness $K$; residual donor covariance joins measurements of the same donor; cell sampling contributes a separate diagonal term. The [implementation](https://github.com/Minhui-Chen/CIGMA/blob/5813e4ae84d7b3733dfcd938fe42d12c6b30a8aa/src/cigma/fit.py) stacks by donor, giving the equivalent order $K\otimes\Omega_g+I_N\otimes\Omega_e+D$.
 
-$$
-U_{\{1\}}=s^2\begin{pmatrix}1&0&0\\0&0&0\\0&0&0\end{pmatrix},\qquad
-U_{\{1,2\}}=s^2\begin{pmatrix}1&\rho&0\\\rho&1&0\\0&0&0\end{pmatrix},
-\quad |\rho|\le1.
-$$
+For multiple genotype components, such as cis and trans, the genetic term becomes $\sum_h\Omega_{g,h}\otimes K_h$, with $K_h=X_hX_h^\top/L_h$. Each component has its own SNP set and variance parameters.
 
-The first permits an effect only in type 1; the second permits effects in types 1 and 2. The all-zero component fixes the entire SNP row to zero. Within an active subset, effects may have different magnitudes. CASE learns mixture weights and effect covariances and uses the fitted mixture for posterior fine-mapping. [CASE, Lin et al. (2026)](https://www.nature.com/articles/s41467-026-72176-3)
+### Estimation and scientific output
 
-### Their exact second-moment connection
-
-Assume independent, zero-mean SNP-effect vectors conditional on the prior parameters. Under CASE,
-
-$$
-\operatorname{Var}(b_j)=\sum_{t=0}^{T}\pi_tU_t,
-\qquad
-\Omega_{\rm CASE}=M\sum_{t=0}^{T}\pi_tU_t.
-$$
-
-Writing $A=XB$ for the genetic contribution, both constructions imply
-
-$$
-\boxed{\operatorname{Cov}(A_{ic},A_{\ell d}\mid X)
-=K_{i\ell}\Omega_{cd}}.
-$$
-
-For CIGMA, $\Omega$ has its specified variance-component structure. For CASE, the same identity uses $\Omega_{\rm CASE}$. The covariance can agree even when the underlying distributions differ.
-
-For example, compare a Gaussian prior with a sparse mixture:
-
-$$
-b_j\sim N_C(0,\Omega/M)
-\quad\text{and}\quad
-b_j\sim0.9\,\delta_0+0.1\,N_C(0,10\Omega/M).
-$$
-
-Both have covariance $\Omega/M$. The second assigns 90% prior probability to an entirely inactive SNP. The first uses a continuous effect distribution. Aggregate covariance alone cannot distinguish these two configurations. Fine-mapping adds distributional assumptions and SNP-level evidence to infer activity.
-
-Here $\delta_0$ denotes a point mass at the zero vector. This is an algebraic comparison of priors, not a claim that the complete algorithms are interchangeable.
-
-## 3. Different inference targets lead to different tasks
-
-### CIGMA: integrate SNP effects and estimate covariance components
-
-Stack expression by cell type. With Gaussian residuals independent of the SNP effects,
-
-$$
-\operatorname{vec}(Y)\sim
-N\left(0,\Omega\otimes K+\Sigma_E\right),
-$$
-
-where $\Sigma_E$ represents the method's residual and measurement covariance. For example,
-
-$$
-\operatorname{Cov}(Y_{ic},Y_{\ell d}\mid X)
-=K_{i\ell}\Omega_{cd}+\operatorname{Cov}(e_{ic},e_{\ell d}).
-$$
-
-CIGMA's HE approach estimates variance components from second moments, with jackknife inference. A schematic moment-fitting objective, after appropriate fixed-effect projection, is
+Haseman–Elston (HE) regression fits second moments. Let $P$ remove fixed effects, $y^*=Py$ be projected stacked expression, and $A_q=P\Sigma_qP$ be a projected covariance basis matrix from the decomposition above. Each $\Sigma_q$ multiplies one unknown variance parameter $\theta_q$. The fitting principle is
 
 $$
 \widehat\theta=\arg\min_\theta
-\left\|yy^\top-\Sigma_0-\sum_q\theta_qA_q\right\|_F^2.
+\left\|y^*y^{*\top}-P\widehat D P-\sum_q\theta_qA_q\right\|_F^2.
 $$
 
-Here $y$ is stacked adjusted expression, $A_q$ are known covariance-component matrices, and $\Sigma_0$ collects specified covariance offsets. Genetic and residual components enter the fit together. This equation explains the estimation principle; the implementation supplies its projection and covariance details. [CIGMA methods](https://www.nature.com/articles/s41586-026-10577-6)
+The unknown coefficients include $\sigma_g^2,v_c,\sigma_e^2,w_c$. Genetic and residual donor variances are estimated together, after the cell-sampling correction. The source implements this moment regression and jackknife uncertainty; REML is also available. [Fitting code](https://github.com/Minhui-Chen/CIGMA/blob/5813e4ae84d7b3733dfcd938fe42d12c6b30a8aa/src/cigma/fit.py)
 
-Write $\bar v=C^{-1}\sum_c v_c$ for the mean cell-type-specific variance. The outputs concern the **gene's genetic architecture**:
+For $\bar v=C^{-1}\sum_c v_c$, the genetic summaries are
 
 $$
-\widehat\sigma^2_{\rm shared},\quad\widehat v_c,\quad
-\frac{\widehat{\bar v}}{\widehat\sigma^2_{\rm shared}+\widehat{\bar v}},
-\qquad H_0:v_1=\cdots=v_C=0.
+\text{shared variance}=\sigma_g^2,\qquad
+\text{specific variance}=v_c,\qquad
+\text{specificity}=\frac{\bar v}{\sigma_g^2+\bar v}.
 $$
 
-Gaussian models can also yield shrunken effect predictions if that calculation is added. A continuous prior alone does not supply causal-inclusion probabilities or a sparse causal set. CIGMA's standard target is variance estimation and testing.
+Testing $H_0:v_1=\cdots=v_C=0$ asks whether genetic effects vary across cell types for the gene. A significant result supports aggregate heterogeneity across the fitted SNP set. It does not localize that heterogeneity to a particular SNP.
 
-### CASE: retain SNP effects and infer their posterior distribution
+## 3. CASE: infer SNP effects and their cell-type activity
 
-Marginal association estimates satisfy
+### Regression and residual dependence
+
+For $M$ cis SNPs and $N_c$ donors observed in type $c$, CASE starts from
+
+$$
+\boxed{y_c=X_c\beta_c+\varepsilon_c},\qquad
+X_c\in\mathbb R^{N_c\times M},\quad
+B=(\beta_1,\ldots,\beta_C)\in\mathbb R^{M\times C}.
+$$
+
+Expression and genotypes are standardized after the specified normalization and covariate adjustment. Gaussian regression residuals are independent between donors but can correlate across types measured in the same donor:
+
+$$
+\operatorname{Cov}(\varepsilon_{ic},\varepsilon_{\ell d})
+=\mathbf1(i=\ell)(V_\varepsilon)_{cd}.
+$$
+
+$V_\varepsilon$ is a $C\times C$ residual covariance. CASE carries this dependence into a summary-statistic analysis through a sample-overlap adjustment. The paper's observation model and its approximation for summary statistics are distinct steps. [CASE model](https://www.nature.com/articles/s41467-026-72176-3)
+
+### Prior on each SNP row: one pattern, several cell-type effects
+
+Introduce a latent pattern $z_j$ for SNP $j$:
+
+$$
+z_j\sim\operatorname{Categorical}(\pi_1,\ldots,\pi_T),\qquad
+\boxed{b_j\mid z_j=t\sim N_C(0,U_t)},\qquad U_T=0.
+$$
+
+SNP rows are independent conditional on the mixture parameters. The mixture $\{\pi_t,U_t\}$ is common to the SNPs in the analyzed gene. **Different SNPs can select different patterns $z_j$.** Each $U_t$ specifies the variances and correlations across cell types within one pattern.
+
+For three cell types, an illustrative pattern is
+
+$$
+U_t=
+\begin{pmatrix}
+0.04&0&0.03\\
+0&0&0\\
+0.03&0&0.09
+\end{pmatrix}.
+$$
+
+Under this pattern, SNP $j$ is active in types 1 and 3, its type-2 effect is exactly zero, and its two active effects have correlation $0.03/\sqrt{0.04\cdot0.09}=0.5$. Their sizes can differ. The all-zero pattern makes the SNP inactive in every type.
+
+The distinction between conditional and marginal distributions is
+
+$$
+\beta_{jc}\mid z_j=t\sim N(0,(U_t)_{cc}),\qquad
+\beta_{jc}\sim\sum_{t=1}^{T}\pi_tN(0,(U_t)_{cc}).
+$$
+
+Here $N(0,0)$ means a point mass at zero. Consequently,
+
+$$
+P(\beta_{jc}=0)=\sum_{t:(U_t)_{cc}=0}\pi_t.
+$$
+
+**One pattern is selected for the whole SNP row.** Its coordinates can have different variances or be zero; they do not independently select unrelated patterns. Before observing data, SNPs share the mixture law. Their posterior activity probabilities can differ once the association evidence and LD are used. [CASE prior and posterior implementation](https://github.com/leaffur/CASE/blob/13f4fc8432ba39853128a4afc5dd8c6a151589a0/R/CASE_models.R)
+
+### Summary-statistic likelihood: separate joint effects from LD
+
+For standardized data, define the marginal association column
 
 $$
 \widehat\beta_c=X_c^\top y_c/N_c,\qquad
-E[\widehat\beta_c\mid\beta_c]\approx R\beta_c.
+\widehat B=(\widehat\beta_1,\ldots,\widehat\beta_C).
 $$
+
+The LD matrix $R$ has dimension $M\times M$. It describes correlation **between SNPs**, whereas CIGMA's $K$ describes similarity **between donors**. Approximately, $E[\widehat B\mid B]=RB$.
 
 <figure class="study-figure" style="max-width:600px">
 <a href="{{base}}/assets/case-study/ld-simple.svg"><img src="{{base}}/assets/case-study/ld-simple.svg" alt="Two SNPs each affect a different cell type, but LD creates marginal associations in both types"></a>
-<figcaption>LD mixes the rows of B. Each SNP acts in one type in this example, but has marginal associations in both. Values are illustrative.</figcaption>
+<figcaption>LD mixes SNP effects in marginal association estimates. The example uses two SNPs and two cell types.</figcaption>
 </figure>
 
-With $\widehat B=(\widehat\beta_1,\ldots,\widehat\beta_C)$,
+CASE uses the asymptotic working likelihood
 
 $$
-\widehat B\mid B\ \dot\sim\ \operatorname{MN}(RB,R,V),\qquad
+\boxed{\widehat B\mid B\ \dot\sim\ \operatorname{MN}(RB,R,V)},\qquad
 \operatorname{Cov}(\widehat B_{jc},\widehat B_{kd}\mid B)
 \approx R_{jk}V_{cd}.
 $$
 
-$V$ is the sampling covariance of the marginal statistics. It is distinct from the biological effect covariance $\Omega$. CASE's approximation uses
+The matrices describe different levels of variation:
+
+| Matrix | Meaning |
+|---|---|
+| $U_t$ | Prior covariance of a SNP's effects, conditional on sharing pattern $t$ |
+| $V_\varepsilon$ | Residual covariance in the donor-level regression |
+| $V_y$ | Total phenotypic covariance across types on the standardized scale |
+| $V$ | Across-type sampling covariance used in the summary likelihood |
+
+The paper uses
 
 $$
-V_{cd}=V_{y,cd}\frac{N_{cd}}{N_cN_d},\qquad V_{cc}=1/N_c
-\quad\text{for standardized expression}.
+V_{cd}=(V_y)_{cd}\frac{N_{cd}}{N_cN_d},\qquad V_{cc}=1/N_c,
 $$
 
-The donor overlap $N_{cd}$ and phenotypic covariance $V_y$ determine the adjustment. The common-$R$ approximation also requires comparable LD across donor groups.
+where $N_{cd}$ counts donors observed in both types. This is the paper's summary-likelihood approximation; $V$ and $V_\varepsilon$ have different definitions. The approximation also assumes suitable LD for the donor groups.
 
-Let $\psi=\{\pi_t,U_t\}$. Monte Carlo EM learns $\psi$ by alternating posterior sampling of $(B,z)$ with updates of the prior parameters. With the fitted prior,
+### Fit the mixture, then calculate posterior support
 
-$$
-p(B,z\mid\widehat B,R,\widehat V,\widehat\psi)
-\propto p(\widehat B\mid B,R,\widehat V)
-\prod_{j=1}^{M}p(b_j,z_j\mid\widehat\psi).
-$$
-
-For $S$ retained posterior draws,
+The analysis proceeds through
 
 $$
-\operatorname{PIP}_{jc}=P(\beta_{jc}\ne0\mid\text{data}),\qquad
-\widehat{\operatorname{PIP}}_{jc}
-\approx\frac1S\sum_{s=1}^{S}\mathbf1(\beta_{jc}^{(s)}\ne0).
+(\widehat B,R,\{N_c,N_{cd}\})
+\longrightarrow\widehat V
+\longrightarrow\{\widehat\pi_t,\widehat U_t\}
+\longrightarrow P(B,z\mid\text{data})
+\longrightarrow\operatorname{PIP}_{jc}.
 $$
 
-LD couples the SNP rows in the likelihood; the sharing mixture couples cell types within each row. The output is **variant-by-cell-type support**, followed by credible sets. [CASE source and input conventions](https://github.com/leaffur/CASE/blob/13f4fc8432ba39853128a4afc5dd8c6a151589a0/R/CASE.R)
+The paper estimates $V$ from weak association signals and fits mixture parameters using Monte Carlo EM. Its E-step uses MCMC for the latent SNP effects and pattern allocations. Posterior sampling with the fitted parameters gives
 
-### Match the output to the scientific question
+$$
+\operatorname{PIP}_{jc}=P(\beta_{jc}\ne0\mid\widehat B,R,\widehat V,
+\{\widehat\pi_t,\widehat U_t\}).
+$$
 
-| Scientific task | Target in the common notation | Appropriate output |
-|---|---|---|
-| Quantify shared and heterogeneous cis regulation | Structure and magnitude of $\Omega$ | CIGMA variance estimates and uncertainty |
-| Test whether a gene's genetic effects differ across types | $v_1=\cdots=v_C=0$ in the shared-plus-specific model | CIGMA gene-level specificity test |
-| Prioritize an experimentally testable variant | Which rows/entries of $B$ are active? | CASE PIPs and credible sets |
-| Identify the cell types supporting a variant | Pattern of nonzero entries in $b_j$ | CASE SNP-level posterior support |
-| Estimate whether regulation is detectable for a gene in a type | At least one supported signal in column $\beta_c$ | CASE eGene call |
-| Relate regulatory architecture to disease heritability | Gene or SNP annotations built from these outputs | Annotation-specific downstream analysis |
+LD couples SNPs in the likelihood; the row prior couples cell types. The [software interface](https://github.com/leaffur/CASE/blob/13f4fc8432ba39853128a4afc5dd8c6a151589a0/R/CASE.R) also accepts z-scores or marginal effects with standard errors. Its covariance and overlap defaults should be checked when reproducing the paper's analysis.
 
-**Shared activity and equal effects are different targets.** The vector $(0.1,0.3,0.7)$ is active in every type and heterogeneous in magnitude. CASE can support its activity pattern while CIGMA can detect aggregate heterogeneity. Neither a CASE non-call nor an imprecise variance estimate establishes absence of regulation.
-
-## 4. From PIPs to credible sets, eQTLs, and eGenes
-
-### Cell-type-wise credible-set construction
+### From PIPs to cell-type-wise credible sets
 
 For gene $g$ and type $c$, let $A$ be a candidate SNP set. CASE's default set criteria are
 
@@ -291,6 +317,54 @@ $$
 The PIP sum instead equals the posterior expected number of active variants. They coincide under an at-most-one-active-variant assumption within the set. In general multi-causal settings, CASE's nominal set rule should be assessed through coverage calibration.
 
 **Published result.** CASE identified 5,057 eGenes among 11,704 candidate genes in OneK1K, 13.0% more than mvSuSiE and 32.9% more than SuSiE in that comparison. Its simulations varied sample size, heritability, and sharing patterns, including null cell types to test over-sharing. [CASE results](https://www.nature.com/articles/s41467-026-72176-3)
+
+## 4. Compare the priors and the questions they answer
+
+### What is shared across SNPs, and what can vary?
+
+| View of the effects | CIGMA shared-plus-specific model | CASE |
+|---|---|---|
+| Fixed type $c$, vary SNP $j$ | $\beta_{jc}\sim N(0,(\sigma_g^2+v_c)/L)$ for every SNP in the component | $\beta_{jc}$ has the same marginal mixture law across SNPs, but each SNP has its own latent pattern $z_j$ |
+| Fixed SNP $j$, vary type $c$ | One Gaussian row prior with shared covariance and type-specific diagonal variances | One mixture component for the row; its covariance can select a subset of active types |
+| What differs between SNPs? | Realized effect values | Realized effect values, latent sharing patterns, and posterior support |
+| What is estimated? | Genetic and residual variance components | Mixture parameters and posterior SNP–type effects |
+
+For CASE, conditioning on all SNP patterns makes the cell-type column Gaussian:
+
+$$
+\beta_c\mid z_1,\ldots,z_M
+\sim N_M\!\left(0,
+\operatorname{diag}\big((U_{z_1})_{cc},\ldots,(U_{z_M})_{cc}\big)\right).
+$$
+
+Some entries have zero variance, and active entries can have different variances because their SNPs selected different patterns. Averaging over the unknown patterns gives a mixture distribution for the column. This differs from CIGMA's single Gaussian column with one variance shared across its SNP entries.
+
+A Gaussian prior does not require equal realized SNP effects. A mixture prior does not assign a separately estimated prior to every SNP. Both distinctions concern the distribution before observing the data; LD can induce posterior dependence between SNPs even when their prior effects are independent.
+
+### A connection at the genetic-covariance level
+
+For an aligned SNP set and genotype scale, suppose the SNP rows are independent with zero mean and common covariance $S$. The genetic component alone, $A=XB$, then satisfies
+
+$$
+\operatorname{Cov}(A_{ic},A_{\ell d}\mid X)
+=\sum_j x_{ij}x_{\ell j}S_{cd}.
+$$
+
+CIGMA uses $S=\Omega_g/L$. CASE's mixture implies $S=\sum_t\pi_tU_t$. This gives a way to compare their implied genetic covariance. The full observation models still contain their own residual and sampling terms.
+
+CIGMA's HE estimator uses second moments, so its estimation principle can extend beyond a literally Gaussian collection of causal effects. CASE's posterior activity probabilities also depend on the mixture's zero components and distributional shape. Equal second moments alone cannot determine those probabilities.
+
+### Choose the analysis from the target
+
+| Scientific question | Target | Relevant analysis |
+|---|---|---|
+| How much genetic variation is shared or heterogeneous across types? | $\sigma_g^2$, $v_c$, and specificity | CIGMA variance estimates and uncertainty |
+| Does the gene show heterogeneous genetic regulation? | $H_0:v_1=\cdots=v_C=0$ | CIGMA gene-level test |
+| Which variant could regulate the gene in type $c$? | $P(\beta_{jc}\ne0\mid\text{data})$ | CASE PIPs and credible sets |
+| Which types support activity of a variant? | Nonzero coordinates of $b_j$ | CASE joint posterior |
+| Does a type contain at least one supported regulatory signal? | A reported credible set for that gene and type | CASE eGene call |
+
+Shared activity and equal effects are different targets. A SNP with effects $(0.1,0.3,0.7)$ is active in every type and varies in magnitude. CASE can support its activity pattern; CIGMA can detect aggregate heterogeneity. A missing discovery in either method can reflect limited precision.
 
 ## 5. CIGMA–CASE overlap
 
@@ -399,4 +473,4 @@ Posterior probabilities also require hypothesis priors, location-weight normaliz
 
 ---
 
-**Revision: October 1, 2026. Data and computation.** The gene-overlap counts are transcribed from the September 28 OneK1K progress report and have not been re-estimated here. The LD and credible-set diagrams are teaching examples. [Figure-generation code]({{base}}/assets/case-study/make_diagrams.py). CASE source inspection refers to commit `13f4fc8`; no new OneK1K CASE fit is reported.
+**Revision: October 1, 2026. Data and computation.** The gene-overlap counts are transcribed from the September 28 OneK1K progress report and have not been re-estimated here. The LD and credible-set diagrams are teaching examples. [Figure-generation code]({{base}}/assets/case-study/make_diagrams.py). Source inspection refers to CIGMA commit `5813e4a` and CASE commit `13f4fc8`; no new OneK1K model fit is reported.
