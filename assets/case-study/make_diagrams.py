@@ -6,9 +6,12 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.patches import FancyBboxPatch
 P=Path(__file__).resolve().parent
-plt.rcParams.update({'font.family':'DejaVu Sans','font.size':11,'text.color':'#263748','axes.labelcolor':'#263748','svg.fonttype':'none'})
+plt.rcParams.update({'font.family':'DejaVu Sans','font.size':11,'text.color':'#263748','axes.labelcolor':'#263748','svg.fonttype':'none','svg.hashsalt':'case-study'})
 def save(fig,name):
- for ext in ['svg','png']:fig.savefig(P/f'{name}.{ext}',dpi=170,bbox_inches='tight',pad_inches=.18)
+ for ext in ['svg','png']:
+  target=P/f'{name}.{ext}'
+  fig.savefig(target,dpi=170,bbox_inches='tight',pad_inches=.18,metadata={'Date':None} if ext=='svg' else None)
+  if ext=='svg':target.write_text('\n'.join(line.rstrip() for line in target.read_text().splitlines())+'\n')
  plt.close(fig)
 def box(ax,x,y,w,h,text,fill='#f0f6fb',fs=11):
  ax.add_patch(FancyBboxPatch((x,y),w,h,boxstyle='round,pad=0.012',edgecolor='#b9cbd9',facecolor=fill,lw=1))
@@ -47,3 +50,25 @@ for y,(a,b,c) in zip([.72,.39,.06],rows):
 ax.text(.50,.985,'Input → statistical construction → interpretable output',ha='center',weight='bold',fontsize=13)
 save(fig,'downstream-process')
 print('Wrote three diagrams; LD algebra checked.')
+# Unified fixed-gene model: same effect matrix, different distributions and targets.
+fig,ax=plt.subplots(figsize=(10,5));ax.set(xlim=(0,1),ylim=(0,1));ax.axis('off')
+box(ax,.23,.81,.54,.16,'One gene: Y = X B + E\nB: SNP rows × cell-type columns',fs=12)
+arrow(ax,(.39,.80),(.24,.69));arrow(ax,(.61,.80),(.76,.69))
+box(ax,.025,.49,.43,.19,'CIGMA\nOne structured Gaussian for each SNP row',fs=11)
+box(ax,.545,.49,.43,.19,'CASE\nSparse mixture for each SNP row',fs=11)
+arrow(ax,(.24,.48),(.24,.40));arrow(ax,(.76,.48),(.76,.40))
+box(ax,.025,.23,.43,.16,'Integrate B → expression covariance\nK: donor similarity',fill='#f7f8fa',fs=11)
+box(ax,.545,.23,.43,.16,'Infer B → SNP-level posterior\nR: correlation between SNPs',fill='#f7f8fa',fs=11)
+arrow(ax,(.24,.22),(.24,.15));arrow(ax,(.76,.22),(.76,.15))
+box(ax,.025,.025,.43,.125,'Shared / specific genetic variance\nGene-level heterogeneity',fs=11)
+box(ax,.545,.025,.43,.125,'PIPs → credible sets → eGenes\nVariant and cell-type support',fs=11)
+save(fig,'unified-framework')
+# Verify the common covariance identity and matched-second-moment example.
+rng=np.random.default_rng(29)
+X=rng.normal(size=(5,4));X=(X-X.mean(0))/X.std(0)
+Omega=.3*np.ones((3,3))+np.diag([.1,.2,.4])
+K=X@X.T/4
+D=np.kron(np.eye(3),X)
+assert np.allclose(D@np.kron(Omega/4,np.eye(4))@D.T,np.kron(Omega,K))
+assert np.allclose(.1*(10*Omega/4),Omega/4)
+print('Unified covariance identity and mixture second moments verified.')
