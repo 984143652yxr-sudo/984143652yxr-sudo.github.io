@@ -1,6 +1,6 @@
 # Study Topics
 
-<p class="lead">Understanding how genetic effects vary across biological contexts—and how to measure that variation carefully.</p>
+<p class="lead">Study notes on statistical genetics and the mathematical mechanisms of language models.</p>
 
 These sections organize the questions in my study diary. The linked entries document learning and ongoing replication work.
 
@@ -33,5 +33,15 @@ A replication is a sequence of decisions about data, models, and evidence. I wan
 - Diagnose calibration before interpreting biological enrichment.
 
 **First case study:** the [workflow notes]({{base}}/diary/cigma-onek1k/) from the OneK1K replication.
+
+</section>
+
+<section class="research-block" markdown="1">
+
+## Language models: attention and representation
+
+Mathematical derivations and small executable examples for understanding how language models represent and process a sequence.
+
+**Position and attention:** [Rotary position embeddings: from rotations to attention]({{base}}/diary/rotary-position-embedding/) — relative-position geometry, coordinate pairing, and numerical checks.
 
 </section>
