@@ -5,8 +5,8 @@
   "date": "2026-09-30",
   "date_label": "September 30, 2026",
   "status": "Statistical study note",
-  "reading_time": "20 min read",
-  "summary": "Shared genetic-effect notation, followed by the full CIGMA variance model and CASE fine-mapping model: residuals, priors, inference, and scientific targets."
+  "reading_time": "25 min read",
+  "summary": "Shared genetic-effect notation, followed by the full CIGMA variance model and CASE fine-mapping model: residuals, priors, inference, scientific targets, and an annotation-informed prior extension."
 }
 ---
 
@@ -471,6 +471,105 @@ $$
 
 Posterior probabilities also require hypothesis priors, location-weight normalization, and the remaining association hypotheses. Multiple signals require a suitable multi-signal analysis. An intersection of credible sets can prioritize a locus for this calculation; colocalization quantifies the evidence for sharing, while mediation requires further assumptions. [Coloc model and hypotheses](https://chr1swallace.github.io/coloc/articles/a03_enumeration.html)
 
+## 8. Trial idea: annotation-informed priors for CASE
+
+*October 5, 2026 · Preliminary methodological study*
+
+CIGMA summarizes genetic variation across SNPs. CASE resolves that variation into SNP-level effects and cell-type activity. A possible extension is to **use external annotations to inform CASE's prior**, while retaining its LD-aware likelihood. The question is whether gene-function information helps infer effect sharing, especially when the association evidence is weak.
+
+<figure class="study-figure study-figure-wide">
+<a href="{{base}}/assets/case-study/annotation-prior.svg"><img src="{{base}}/assets/case-study/annotation-prior.svg" alt="Likelihood from genotype and expression combines with gene-informed sharing and SNP-informed activity priors to yield SNP by cell-type posterior probabilities."></a>
+<figcaption>Two sources of prior information enter at different levels. Gene features are common to the locus; SNP features vary within it.</figcaption>
+</figure>
+
+### Keep the likelihood; make the prior depend on annotations
+
+Introduce a gene index $g$ because the annotation relationship is learned across genes. For each gene, $B_g$ remains a **SNP × cell-type effect matrix**, and $b_{gj}$ is the length-$C$ vector of effects for SNP $j$. Retain the working summary-statistic likelihood
+
+$$
+\widehat B_g\mid B_g\sim\operatorname{MN}(R_gB_g,R_g,V_g).
+$$
+
+Here $R_g$ describes LD and $V_g$ describes sampling covariance across cell types, including sample-size and donor-overlap effects. Annotation information enters the prior on $b_{gj}$; it does not itself estimate cell-sampling uncertainty.
+
+| Additional quantity | Role |
+|---|---|
+| $h_g$ | Gene-text features, shared by all SNPs of gene $g$ |
+| $a_{gj}$ | SNP annotations, such as TSS proximity or enhancer overlap |
+| $q_{gj}$ | Prior activity probability before the causal-count restriction |
+| $\rho_{gt}$ | Probability of sharing pattern $t$, conditional on activity |
+| $U_t$ | Effect covariance for non-null pattern $t$ |
+
+Use separate regressions for activity and sharing:
+
+$$
+q_{gj}=\operatorname{logit}^{-1}(\alpha+\eta^\top a_{gj}),
+\qquad
+\rho_{gt}=\frac{\exp(h_g^\top w_t)}{\sum_s\exp(h_g^\top w_s)}.
+$$
+
+The proposed prior is
+
+$$
+\boxed{
+b_{gj}\sim(1-q_{gj})\delta_{\mathbf0}
++q_{gj}\sum_t\rho_{gt}N_C(0,U_t).
+}
+$$
+
+For example, patterns may represent T-only, T+NK, or activity in all types. Zero rows and columns of $U_t$ enforce inactivity; active effects can differ in size. The pilot fixes these covariance patterns and learns annotation coefficients across training genes. This changes both the prior specification and the fitting strategy relative to the CASE analysis above.
+
+**Gene features inform sharing; SNP features distinguish variants.** Two SNPs with identical annotations receive the same activity prior even if their evidence differs. Their posterior probabilities can still differ through the likelihood. A gene embedding alone provides no SNP-specific feature for distinguishing two otherwise indistinguishable variants in perfect LD.
+
+### Where the language model enters
+
+[GenePT](https://www.nature.com/articles/s41551-024-01284-6) represents genes using embeddings of gene descriptions. The pilot uses frozen public gene embeddings, then normalizes them and fits PCA on training genes:
+
+$$
+\text{gene description}\longrightarrow\text{embedding}
+\longrightarrow h_g\longrightarrow\rho_{gt}.
+$$
+
+The association data learn how these features relate to sharing patterns. Posterior inference combines that learned prior with the observed eQTL evidence. In the pilot, 1,536 embedding coordinates are reduced to four principal components plus an intercept.
+
+### Fit and evaluate the extension
+
+Split genes into training, validation, and test sets. Estimate the annotation coefficients by penalized marginal likelihood on training genes, integrating over latent effects and activity patterns. Select regularization on validation genes, then hold the fitted mapping fixed for test genes.
+
+The small-locus prototype also restricts the number of active SNPs to at most $L$. Its configuration prior is the independent mixture above **conditioned on this restriction**, with a parameter-dependent normalizing constant. Consequently, $q_{gj}$ is the pre-restriction probability. Exact enumeration is feasible for these small loci; scaling to realistic cis regions requires a different computational strategy.
+
+The target remains
+
+$$
+\operatorname{PIP}_{gjc}=P(B_{gjc}\ne0\mid\widehat B_g,R_g,V_g,h_g,a_g).
+$$
+
+Assess both variant localization and cell-type activity, along with posterior calibration and set coverage. The prototype's all-signal sets target inclusion of **all causal SNPs**, conditional on a signal; this differs from the CASE credible-set construction in Section 3.
+
+### Preliminary simulation: benefit depends on annotation validity
+
+The pilot summary reports five simulation seeds, 600 real gene embeddings, eight SNPs per locus, five cell types, and zero to two causal SNPs. SNP annotations and association outcomes are synthetic. In the aligned scenario, annotations predict the simulated truth by construction.
+
+| Prior information | SNP AUPRC | SNP × cell-type activity AUPRC |
+|---|---:|---:|
+| Global mixture | 0.597 | 0.563 |
+| Gene embeddings | 0.603 | 0.617 |
+| SNP annotations | 0.788 | 0.654 |
+| Both | 0.791 | 0.712 |
+
+AUPRC summarizes precision–recall ranking performance. These are reported five-seed means from the pilot summary; the underlying runs have not been independently reproduced for this diary. The global baseline is the prototype's fixed-covariance model. An official CASE comparison and a OneK1K application remain pending.
+
+When annotation relationships reverse in the test data, combined-model cell-type AUPRC falls to **0.231**, compared with **0.470** for the global baseline. Reported all-signal coverage falls from **98.4% to 65.2%**. A strong but incorrect prior can concentrate posterior support on the wrong configurations.
+
+A practical next step is to shrink annotation-based sharing toward a global mixture,
+
+$$
+\rho_g=(1-\lambda)\rho_{\mathrm{global}}
++\lambda\rho_{\mathrm{annotation},g},\qquad 0\le\lambda\le1,
+$$
+
+with $\lambda$ selected on validation data. This is a proposed safeguard, whose calibration under distribution shift still needs testing. Shuffled embeddings, text-length controls, and held-out loci can help distinguish useful biological information from annotation or training-set artifacts. If annotations enter the prior, downstream enrichment in those same annotations also needs an independent evaluation design.
+
 ---
 
-**Revision: October 1, 2026. Data and computation.** The gene-overlap counts are transcribed from the September 28 OneK1K progress report and have not been re-estimated here. The LD and credible-set diagrams are teaching examples. [Figure-generation code]({{base}}/assets/case-study/make_diagrams.py). Source inspection refers to CIGMA commit `5813e4a` and CASE commit `13f4fc8`; no new OneK1K model fit is reported.
+**Revision: October 5, 2026. Data and computation.** The gene-overlap counts are transcribed from the September 28 OneK1K progress report and have not been re-estimated here. The LD and credible-set diagrams are teaching examples. [Figure-generation code]({{base}}/assets/case-study/make_diagrams.py). Source inspection refers to CIGMA commit `5813e4a` and CASE commit `13f4fc8`; no new OneK1K model fit is reported. Section 8 summarizes an annotation-prior pilot from the October 5 meeting draft; its synthetic results are reported from that draft and were not rerun for this update.
