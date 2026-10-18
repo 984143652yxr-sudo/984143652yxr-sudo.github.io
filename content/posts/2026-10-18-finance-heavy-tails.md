@@ -1,217 +1,180 @@
 ---
 {
   "slug": "finance-heavy-tails",
-  "title": "Heavy tails in finance: from return distributions to portfolio decisions",
+  "title": "Heavy tails in finance: how tail risk changes portfolio weights",
   "date": "2026-10-18",
   "date_label": "October 18, 2026",
   "status": "Interactive finance study",
-  "reading_time": "15 min + exploration",
-  "summary": "Explore historical stock-industry returns, see departures from a normal model, and work through expected-shortfall allocation and extreme-value risk sizing."
+  "reading_time": "10 min + exploration",
+  "summary": "From one asset's extreme returns to portfolio tail contributions and maximum expected return under an expected-shortfall budget."
 }
 ---
 
-## 1. Start with returns, then look at the tails
+## 1. Whose distribution has a heavy tail?
 
-**Study question:** How does a model of rare, large losses change portfolio construction? A price chart shows a market's path. A return distribution asks how large a one-period change can be, and how often it occurs.
+**Heavy tails are a property of a return distribution.** They can appear at each level:
 
-For a dividend-adjusted investment value $P_t$, the daily simple return is
-
-$$
-r_t=\frac{P_t-P_{t-1}}{P_{t-1}},\qquad
-r_{p,t}=w r_{A,t}+(1-w)r_{B,t},\qquad L_t=-r_{p,t}.
-$$
-
-A positive $L_t$ is a loss. The portfolio equation assumes weights $w$ and $1-w$ at the start of each day. Holding those weights fixed across dates means daily rebalancing. The study excludes costs and leverage.
-
-| Notation | Meaning |
+| Random variable | Interpretation |
 |---|---|
-| $r_t$, $r_{p,t}$ | Asset return and portfolio return |
-| $L=-r_p$ | Portfolio loss as a fraction of initial wealth |
-| $\mu,s$ | Mean and standard deviation of returns |
-| $z_t=(r_{p,t}-\bar r_p)/s$ | Standardized observed return |
-| $\alpha$ | Confidence level for a loss quantile or expected shortfall |
-| $u,\xi,\beta$ | Extreme-value threshold, tail shape, and tail scale |
+| $r_j$ | Return of one stock |
+| $r_A=\sum_jv_jr_j$ | Return of an industry portfolio |
+| $r_p=w r_A+(1-w)r_B$ | Return of a portfolio of two industries |
 
-Equations use return fractions: $0.02$ means 2%. The interactive panel displays returns and losses in **percent**.
+The data here contain **industry portfolios**. Each is already a weighted collection of stocks. Two industries make allocation a one-dimensional problem: choose $w\in[0,1]$. The same model extends to many individual stocks.
 
-### Interactive lab
+For standardized returns $Z=(r-E[r])/\operatorname{SD}(r)$, compare
 
-Start with the default 50/50 technology–utilities portfolio. Change an industry or allocation, compare a quiet year with a crisis year, and hover over extreme observations. The four plots update together.
+$$
+\underbrace{P(|Z|>x)}_{\text{observed tail frequency}}
+\quad\text{with}\quad
+\underbrace{2[1-\Phi(x)]}_{\text{normal reference}}.
+$$
 
-<iframe id="finance-lab" src="{{base}}/assets/finance/panel.html" title="Interactive heavy-tail and portfolio allocation laboratory" style="width:100%;height:1550px;border:1px solid #d8e2e9;border-radius:6px;" loading="lazy"></iframe>
+Heavy tails relative to a normal benchmark mean unusually frequent large deviations. They do not determine the sign or size of $E[r]$. Portfolio allocation needs **expected returns, marginal tails, and joint dependence**.
+
+A polynomial model has $P(X>x)\sim\ell(x)x^{-\kappa}$; smaller $\kappa$ means a heavier tail. Student's $t_\nu$ is a familiar example with exponent $\nu$. Empirical fat tails do not establish a power law or infinite variance. Long-only simple-return losses are bounded by 100%, so an unbounded tail model is an approximation over a relevant range. [Cont (2001)](https://rama.cont.perso.math.cnrs.fr/pdf/empirical.pdf)
+
+## 2. Interactive lab: diagnose → combine → allocate
+
+**First set A to 100%:** Figures 1–2 describe one industry's returns. Then mix A and B: Figures 3–4 show how their joint losses affect allocation. **Load worked example** sets technology–utilities, 2010–2019, 97.5% ES, and a 2.5% loss budget.
+
+<iframe id="finance-lab" src="{{base}}/assets/finance/panel.html" title="Interactive heavy-tail and portfolio allocation laboratory" style="width:100%;height:1650px;border:1px solid #d8e2e9;border-radius:6px;" loading="lazy"></iframe>
 <script src="{{base}}/assets/finance/embed.js" defer></script>
 
-[Open the lab in a full-width tab]({{base}}/assets/finance/panel.html) · [Download the historical returns]({{base}}/assets/finance/returns.csv)
+[Open full-width]({{base}}/assets/finance/panel.html) · [Download data]({{base}}/assets/finance/returns.csv)
 
-**Data.** These are ten value-weighted U.S. stock-industry research portfolios from the [Kenneth R. French Data Library](https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/Data_Library/det_10_ind_port.html), including technology, energy, healthcare, and utilities. The fixed sample contains **6,539 trading days, January 3, 2000–December 31, 2025**. Returns include distributions; these are industry portfolios rather than individual stocks or investable ETFs. The downloaded file uses the August 2026 CRSP database. Historical revisions can change the results of a later download.
+| Figure | Axes | Statistical question |
+|---|---|---|
+| **1. Q–Q** | Normal quantile → observed standardized return | Are extreme returns larger than a normal model predicts? |
+| **2. Exceedance** | Magnitude in SD units → probability, log scale | How much more frequent are large moves? |
+| **3. Tail contributions** | A's loss → B's loss; one point per date | What does each asset do when **this portfolio** loses most? |
+| **4. Allocation** | ES loss → estimated mean return; one point per weight | Which weight gives the highest estimated return within the loss budget? |
 
-### How to read the plots
+For the full-sample 50/50 technology–utilities portfolio, 100 of 6,539 days exceed three sample SDs in absolute value; the fitted normal reference gives about 17.7. This is an unconditional diagnostic, pooling calm and volatile periods.
 
-1. **Normal Q–Q:** the x-axis is a standard-normal quantile; the y-axis is an observed standardized return quantile. Under approximate normality, points follow the diagonal. Large downward and upward departures reveal unusually long lower and upper tails relative to that benchmark.
-2. **Tail probability:** x is a magnitude threshold in standard-deviation units; y is the fraction of returns beyond that threshold in either direction. The logarithmic y-axis makes rare events visible. The gray line is $2[1-\Phi(x)]$.
-3. **Joint returns:** x and y are the two industries' same-day returns. Orange points lie below both empirical fifth percentiles. This shows whether diversification partners experience large losses together.
-4. **Allocation curve:** x is the weight in industry A; y is daily expected shortfall. The historical curve retains observed joint losses; the normal curve uses only the portfolio's estimated mean and standard deviation.
+## 3. Figure 3: marginal tails become portfolio risk through dependence
 
-For the default full-sample portfolio, **100 days** exceed three sample standard deviations in absolute magnitude. A normal reference gives about **17.7 days**. This comparison is a descriptive diagnostic: parameters were estimated from the same sample, and observations are temporally dependent.
+Let $L_A=-r_A$, $L_B=-r_B$, and $L_p=wL_A+(1-w)L_B$. Positive values are losses; negative values are gains.
 
-## 2. What does “heavy-tailed” mean?
-
-In empirical finance, *fat tails* commonly describes more extreme returns than a fitted Gaussian model predicts. The [stylized-facts literature](https://rama.cont.perso.math.cnrs.fr/pdf/empirical.pdf) also emphasizes volatility clustering: large moves tend to occur near other large moves. A large sample standard deviation alone is different from an unusually heavy tail after standardization.
-
-A more specific mathematical model is a regularly varying upper tail:
+Define the portfolio-tail event
 
 $$
-P(X>x)\sim \ell(x)x^{-\kappa},\qquad \kappa>0,
+\mathcal T_w=\{L_p\ge\operatorname{VaR}_\alpha(L_p)\}.
 $$
 
-where $\ell$ is slowly varying. A smaller exponent $\kappa$ means a heavier tail. For example, Student's $t_\nu$ has a polynomial tail with exponent $\nu$, while the normal tail decreases approximately as $e^{-x^2/2}/x$. For a variance-matched comparison, use $\sqrt{(\nu-2)/\nu}\,t_\nu$ when $\nu>2$. Mean, variance, and fourth moment require $\nu>1,2,4$, respectively.
-
-Regular variation is one class of heavy tails. A finite return sample cannot prove this asymptotic form or establish infinite variance. Moreover, an unlevered long-only simple-return loss is bounded by 100%. Polynomial models for such losses describe an observed range; they cannot be literally valid to infinity. Log returns and leveraged positions have different bounds.
-
-### Why time variation matters
-
-A useful decomposition is
+For a continuous loss distribution,
 
 $$
-r_t=\mu_t+\sigma_t\varepsilon_t.
+\boxed{
+\operatorname{ES}_\alpha(L_p)
+=\underbrace{wE[L_A\mid\mathcal T_w]}_{C_A}
++\underbrace{(1-w)E[L_B\mid\mathcal T_w]}_{C_B}.
+}
 $$
 
-Pooling calm and volatile days creates a scale mixture. Even conditionally Gaussian innovations can produce an unconditional distribution with pronounced tails. Consequently, two questions should be separated: **How extreme is a move relative to long-run volatility? How extreme is it relative to today's volatility?** The panel answers the first using the selected sample. It does not fit a conditional volatility model.
+**Orange points are the portfolio's worst days.** The panel reports $C_A$ and $C_B$ in percentage points of loss. It uses fractional weighting at the empirical tail boundary so their sum equals sample ES exactly.
 
-Marginal tails and joint dependence are also distinct. A stock can have large individual moves without always falling when another stock falls. The scatterplot preserves observed same-day dependence, which is essential when adding portfolio returns. Correlation alone does not describe general joint-tail behavior. [Embrechts, McNeil & Straumann](https://people.math.ethz.ch/~embrecht/ftp/pitfalls.pdf)
+- Large losses in both assets on orange days: limited protection from mixing them.
+- B gains on those days: B can offset A's losses; $C_B$ can be negative.
+- Change $w$: both the loss contributions and the dates in $\mathcal T_w$ can change.
 
-## 3. Classical application I: allocate by expected shortfall
-
-### The target
-
-Value-at-risk is a loss quantile; expected shortfall averages the upper loss tail:
+Under smoothness, the allocation sensitivity is
 
 $$
-\operatorname{VaR}_\alpha(L)=F_L^{-1}(\alpha),\qquad
-\operatorname{ES}_\alpha(L)=\frac{1}{1-\alpha}\int_\alpha^1F_L^{-1}(p)\,dp.
+\frac{d\operatorname{ES}_\alpha(L_p)}{dw}
+=E[L_A-L_B\mid\mathcal T_w].
 $$
 
-At 97.5%, ES describes the average loss in the worst 2.5% probability mass. For continuous distributions it equals $E[L\mid L\ge\operatorname{VaR}_\alpha]$. The quantile-integral definition also handles discrete samples and ties.
+Thus the useful diversification question is **which asset reduces losses in the portfolio tail**, alongside its expected return. Two separate tail histograms cannot answer this joint question. [Dependence and risk](https://people.math.ethz.ch/~embrecht/ftp/pitfalls.pdf)
 
-For example, two strategies can share a 97.5% VaR of 3%, yet have ES values of 4% and 9%. VaR locates the threshold; ES distinguishes the severity beyond it. For normal portfolio returns,
+## 4. Figure 4: maximize return subject to tail risk
 
-$$
-\operatorname{ES}^{N}_\alpha=-\mu_p+
-\sigma_p\frac{\phi(\Phi^{-1}(\alpha))}{1-\alpha}.
-$$
+### Specify the decision
 
-The panel compares this expression with empirical ES. It averages exactly the worst $n(1-\alpha)$ observations' worth of probability, using a fractional boundary weight when necessary.
-
-### From a risk measure to an optimization problem
-
-[Rockafellar & Uryasev (2000)](https://sites.math.washington.edu/~rtr/papers/rtr179-CVaR1.pdf) gave a practical scenario-based formulation of CVaR/ES optimization. With historical return vectors $r_t$ and portfolio weights $w$, solve
+Let $\mu_A=E[r_A]$, $\mu_B=E[r_B]$, and $b$ be the allowed expected shortfall. The allocation problem is
 
 $$
-\min_{w,\tau}\left\{
-\tau+\frac{1}{n(1-\alpha)}\sum_{t=1}^{n}(-w^\top r_t-\tau)_+
-\right\},\qquad
+\boxed{
+\max_{0\le w\le1}\;w\mu_A+(1-w)\mu_B
+\quad\text{subject to}\quad
+\operatorname{ES}_\alpha(wL_A+(1-w)L_B)\le b.
+}
+$$
+
+Without a risk constraint, this linear objective puts everything in whichever asset has the larger mean. Tail risk restricts that concentration. A different objective, such as expected log wealth, can give different weights.
+
+In Figure 4, choose the **highest point to the left of the budget line**. The star marks the historical-ES solution; the open diamond marks the normal-model solution. The button applies the historical solution to all four figures. An infeasible budget is reported explicitly.
+
+### What changes when tails are retained?
+
+For normally distributed portfolio returns,
+
+$$
+\operatorname{ES}^{N}_\alpha(L_p)
+=-\mu_p+\sigma_p\frac{\phi(\Phi^{-1}(\alpha))}{1-\alpha}.
+$$
+
+This reduces the risk calculation to mean and variance. Historical ES instead retains observed tail magnitudes and same-day dependence. Its general definition and scenario representation are
+
+$$
+\operatorname{ES}_\alpha(L)
+=\frac{1}{1-\alpha}\int_\alpha^1F_L^{-1}(p)\,dp,
+$$
+
+$$
+\widehat{\operatorname{ES}}_\alpha(L_p)
+=\min_\tau\left[\tau+
+\frac{1}{n(1-\alpha)}\sum_t(L_{p,t}-\tau)_+\right].
+$$
+
+[Rockafellar & Uryasev (2000)](https://sites.math.washington.edu/~rtr/papers/rtr179-CVaR1.pdf) provide the classical CVaR optimization framework. For many assets, maximize $\widehat\mu^\top w$ subject to
+
+$$
+\tau+\frac{\sum_ts_t}{n(1-\alpha)}\le b,\quad
+s_t\ge-w^\top r_t-\tau,\quad s_t\ge0,\quad
 w\ge0,\quad\mathbf1^\top w=1.
 $$
 
-Here $\tau$ is an auxiliary loss threshold, and $(x)_+=\max(x,0)$. For many assets, introduce $s_t\ge0$ and $s_t\ge-w^\top r_t-\tau$; the objective becomes $\tau+\sum_ts_t/[n(1-\alpha)]$, a linear program. A required mean return can be added as $w^\top\widehat\mu\ge m_0$.
+This is a linear program. ES incorporates extreme-loss severity without requiring a fitted power law. The panel solves the two-asset version on a 1% weight grid. All return and risk values shown in the panel are daily percentages.
 
-This approach lets severe observed or simulated joint losses influence weights directly. It requires an integrable loss distribution but no particular power-law assumption. Large tail losses matter more than their frequency alone.
+### Worked example: the tail assumption changes the feasible weight
 
-### A reproducible allocation example
+**Estimate on 2010–2019; freeze weights; evaluate on 2020–2025.** Both methods maximize the same estimated mean return with $\alpha=97.5\%$ and $b=2.5\%$.
 
-Use technology and utilities, choose weights on **2000–2019 only**, and evaluate the fixed allocation on **2020–2025**. Compare equal weights, minimum sample variance, and minimum 97.5% ES on a 1-percentage-point weight grid. There is no target-return constraint here, so this is a risk-minimization exercise.
+| Risk model used to select weights | Technology | Utilities | Model training ES | Observed training ES | Test ES | Test mean return |
+|---|---:|---:|---:|---:|---:|---:|
+| Normal | 97% | 3% | 2.497% | 3.222% | 4.809% | 0.094% |
+| Historical | 51% | 49% | 2.496% | 2.496% | 4.047% | 0.070% |
 
-| Training rule | Technology weight | Training ES | Test daily SD | Test ES |
-|---|---:|---:|---:|---:|
-| Equal weights | 50% | 3.455% | 1.342% | 4.037% |
-| Minimum variance | 19% | 3.280% | 1.306% | 3.988% |
-| Minimum ES | 20% | 3.280% | 1.304% | 3.980% |
+The normal model permits substantially more technology exposure. Its chosen allocation already exceeds the budget when measured by historical training ES. Retaining observed tail losses leads to a more balanced allocation, with lower test ES **and lower test mean return**.
 
-The two optimized allocations are nearly identical. Their test ES difference is about **0.008 percentage points**, with no significance claim. This example shows how to formulate and evaluate a tail-risk objective; it does not establish superior future performance. Both optimized allocations also have lower test average daily returns than the 50/50 allocation (about 0.053–0.054% versus 0.069%).
+Both test ES values exceed 2.5%: an estimated training constraint is not a guarantee about future risk. Results depend on the estimation window; using 2000–2019 with a 3.5% budget makes both methods select utilities alone. This worked example illustrates a mechanism, not universal superiority. [Reproduce this comparison]({{base}}/assets/finance/allocation_study.py) · [Exact results]({{base}}/assets/finance/allocation-results.json)
 
-The interactive allocation curve re-estimates risk within whichever period is selected. Its minimum is **in sample**. The table above uses a fixed chronological split and contains 5,031 training days and 1,508 test days. [Computation and source code]({{base}}/assets/finance/prepare_data.py) · [Exact results]({{base}}/assets/finance/analysis.json)
+## 5. A second use: size total exposure
 
-## 4. Classical application II: extreme-value tails for position sizing
-
-Historical ES cannot generate a loss more severe than the observed scenarios. Extreme-value theory provides a model for the part of a loss distribution beyond a high threshold.
-
-### Model the exceedances
-
-For losses $L>u$, approximate the excess $Y=L-u$ by a generalized Pareto distribution (GPD):
-
-$$
-P(Y>y\mid L>u)\approx
-\left(1+\xi\frac{y}{\beta}\right)^{-1/\xi},\qquad y\ge0,
-$$
-
-on its valid support, with scale $\beta>0$. Positive $\xi$ gives a polynomial tail; $\xi=0$ is the exponential limit. Let $p_u=P(L>u)$ be estimated by the exceedance fraction. For $\alpha>1-p_u$ and $\xi\ne0$,
-
-$$
-\operatorname{VaR}_\alpha\approx
-u+\frac{\beta}{\xi}\left[\left(\frac{p_u}{1-\alpha}\right)^\xi-1\right],
-\qquad
-\operatorname{ES}_\alpha\approx
-\frac{\operatorname{VaR}_\alpha+\beta-\xi u}{1-\xi},\quad\xi<1.
-$$
-
-ES is finite under the fitted GPD only when $\xi<1$.
-
-### Turn a tail estimate into an exposure limit
-
-Consider an **illustrative model**, separate from the historical data above: $u=3\%$, $p_u=5\%$, and $\beta=1\%$. Vary the tail shape while keeping the threshold, exceedance probability, and scale fixed.
-
-| Tail shape $\xi$ | 99% VaR | 99% ES | Maximum risky fraction for a 2% ES budget |
-|---|---:|---:|---:|
-| 0.10 | 4.75% | 6.05% | 33.1% |
-| 0.25 | 4.98% | 6.98% | 28.7% |
-| 0.50 | 5.47% | 9.94% | 20.1% |
-
-Place fraction $a$ in a given risky portfolio and the remainder in zero-return cash for the one-day horizon. Positive homogeneity gives
+For risky-portfolio loss $L$, risky fraction $a\ge0$, and zero-return cash,
 
 $$
 \operatorname{ES}_\alpha(aL)=a\operatorname{ES}_\alpha(L),\qquad
- a\le\min\left(1,\frac{\text{loss budget}}{\operatorname{ES}_\alpha(L)}\right).
+ a\le\min\left(1,\frac{b}{\operatorname{ES}_\alpha(L)}\right).
 $$
 
-Heavier modeled tails reduce the allowed exposure for a fixed risk budget. This controls the model's expected tail loss, rather than imposing a maximum realized loss. The numbers are hypothetical calculations, not estimated allocations or investment recommendations.
+If estimated ES is 7% and the budget is 2%, exposure is at most $2/7\approx28.6\%$. A heavier fitted tail increases estimated ES and reduces allowed exposure.
 
-### A classical conditional version
-
-[McNeil & Frey (2000)](https://statmath.wu.ac.at/~frey/publications/evt-garch.pdf) combine GARCH volatility filtering with extreme-value estimation of innovation tails. The analysis sequence is
+A classical extension estimates time-varying volatility and then fits extreme-value tails to standardized residuals:
 
 $$
-\text{return history}\longrightarrow(\widehat\mu_t,\widehat\sigma_t)
-\longrightarrow\widehat\varepsilon_t
-\longrightarrow\text{GPD on }-\widehat\varepsilon_t
-\longrightarrow\text{next-day loss risk}.
-$$
-
-Given $r_{t+1}=\mu_{t+1}+\sigma_{t+1}\varepsilon_{t+1}$ and $X=-\varepsilon$,
-
-$$
+r_t=\mu_t+\sigma_t\varepsilon_t
+\quad\Longrightarrow\quad
 \operatorname{ES}_\alpha(L_{t+1}\mid\mathcal F_t)
-=-\mu_{t+1}+\sigma_{t+1}\operatorname{ES}_\alpha(X).
+=-\mu_{t+1}+\sigma_{t+1}\operatorname{ES}_\alpha(-\varepsilon).
 $$
 
-This separates the current volatility level from the innovation-tail shape. A risk budget can then be updated using the conditional estimate. The panel reports unconditional historical diagnostics; it does not claim to implement this GARCH–EVT fit.
+[McNeil & Frey (2000)](https://statmath.wu.ac.at/~frey/publications/evt-garch.pdf) develop this GARCH–EVT approach. It provides conditional risk estimates for exposure control; the current panel uses historical unconditional ES.
 
-Threshold selection trades approximation bias against the number of exceedances. Check stability across thresholds, residual dependence, and out-of-sample exceedances. Position limits also depend on liquidity, costs, and model uncertainty. A favorable tail fit on yesterday's data does not make extrapolation certain.
+## Data and estimation limits
 
-## 5. A small study workflow
-
-1. Compare **2000–2025** with **2017**, **2008**, and **2020**. Record how the Q–Q plot and tail frequency change after standardization.
-2. Compare technology–utilities with technology–energy. Use the joint-return plot to inspect simultaneous losses before interpreting diversification.
-3. Set ES confidence to 95%, 97.5%, and 99%. Record the effective number of tail observations; high confidence levels can leave very little data in a single year.
-4. Select weights on a training interval, freeze them, and assess losses on later dates. Use rolling tests and a block bootstrap for uncertainty, preserving serial and same-day cross-asset dependence.
-
-The notebook provides historical diagnostics, one computed allocation exercise, and one hypothetical extreme-value sizing example. It makes no claim that heavy tails alone create a trading profit.
-
-## Sources and reproducibility
-
-- Kenneth R. French. [Ten Industry Portfolios: construction and coverage](https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/Data_Library/det_10_ind_port.html). [Original daily CSV archive](https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/10_Industry_Portfolios_daily_CSV.zip). Copyright Eugene F. Fama and Kenneth R. French.
-- Cont (2001). [Empirical properties of asset returns: stylized facts and statistical issues](https://rama.cont.perso.math.cnrs.fr/pdf/empirical.pdf).
-- Rockafellar & Uryasev (2000). [Optimization of Conditional Value-at-Risk](https://sites.math.washington.edu/~rtr/papers/rtr179-CVaR1.pdf).
-- McNeil & Frey (2000). [Estimation of tail-related risk measures for heteroscedastic financial time series: an extreme value approach](https://statmath.wu.ac.at/~frey/publications/evt-garch.pdf).
-- Embrechts, McNeil & Straumann (2002). [Correlation and dependence in risk management: properties and pitfalls](https://people.math.ethz.ch/~embrecht/ftp/pitfalls.pdf).
-
-Snapshot downloaded October 18, 2026. Missing-data codes are excluded; observations retain their trading-date alignment. The [data file]({{base}}/assets/finance/returns.json) records the original archive hash and version header. The [Python script]({{base}}/assets/finance/prepare_data.py) reproduces the data extraction and chronological allocation comparison; the [panel calculations]({{base}}/assets/finance/panel.js) are available for inspection. Returns are rounded to the precision supplied by the source.
+- **Data:** ten U.S. value-weighted industry portfolios, 2000–2025, from the [French Data Library](https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/Data_Library/det_10_ind_port.html). Snapshot downloaded October 18, 2026; August 2026 CRSP vintage. Copyright Eugene F. Fama and Kenneth R. French.
+- **Portfolio convention:** daily fixed weights, no leverage or transaction costs. Industry portfolios are research series, not ETFs. Equations use return fractions; tables display percentages.
+- **Estimation:** sample means are noisy; tail samples are small. Figure 4 is in sample. Only the worked-example table uses frozen weights on later data. Use rolling validation and dependence-aware uncertainty estimates before drawing performance conclusions.
+- **Code:** [data extraction]({{base}}/assets/finance/prepare_data.py), [allocation comparison]({{base}}/assets/finance/allocation_study.py), [interactive calculations]({{base}}/assets/finance/panel.js). Download `returns.json` and `prepare_data.py` beside `allocation_study.py` to reproduce the comparison.

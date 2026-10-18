@@ -1,0 +1,28 @@
+{
+  "training": "2010\u20132019",
+  "testing": "2020\u20132025",
+  "training_n": 2516,
+  "test_n": 1508,
+  "alpha": 0.975,
+  "budget_percent": 2.5,
+  "methods": [
+    {
+      "method": "Historical ES",
+      "technology_weight": 0.51,
+      "training_mean": 0.05649972178060413,
+      "model_training_es": 2.495569793322734,
+      "historical_training_es": 2.495569793322734,
+      "test_mean": 0.06990649867374005,
+      "test_es": 4.046955172413792
+    },
+    {
+      "method": "Normal ES",
+      "technology_weight": 0.97,
+      "training_mean": 0.06652428457869634,
+      "model_training_es": 2.4969462821063773,
+      "historical_training_es": 3.2217764705882344,
+      "test_mean": 0.09397413793103448,
+      "test_es": 4.808776657824932
+    }
+  ]
+}

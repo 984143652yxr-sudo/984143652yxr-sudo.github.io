@@ -5,6 +5,13 @@ const mean=a=>a.reduce((x,y)=>x+y,0)/a.length;
 const sd=a=>{const m=mean(a);return Math.sqrt(a.reduce((s,x)=>s+(x-m)**2,0)/(a.length-1));};
 function quantile(a,p){const s=[...a].sort((x,y)=>x-y),h=(s.length-1)*p,i=Math.floor(h);return s[i]+(s[Math.min(i+1,s.length-1)]-s[i])*(h-i);}
 function es(a,alpha){const l=a.map(x=>-x).sort((x,y)=>y-x),mass=l.length*(1-alpha),k=Math.floor(mass);return (l.slice(0,k).reduce((s,x)=>s+x,0)+(mass-k)*(l[k]||0))/mass;}
+function tailContributions(a,b,w,alpha){
+const ordered=a.map((v,i)=>({i,loss:-(w*v+(1-w)*b[i])})).sort((x,y)=>y.loss-x.loss);
+const mass=a.length*(1-alpha);let remain=mass,ca=0,cb=0;const indices=[];
+for(const o of ordered){if(remain<=1e-12)break;const f=Math.min(1,remain);ca+=f*(-w*a[o.i]);cb+=f*(-(1-w)*b[o.i]);indices.push(o.i);remain-=f;}
+return {a:ca/mass,b:cb/mass,indices};
+}
+function bestAllocation(risks,means,budget){let best=-1;for(let i=0;i<risks.length;i++)if(risks[i]<=budget+1e-12&&(best<0||means[i]>means[best]+1e-12))best=i;return best;}
 // Acklam inverse-normal approximation, adequate for plotting positions in this sample.
 function invnorm(p){const a=[-39.6968302866538,220.946098424521,-275.928510446969,138.357751867269,-30.6647980661472,2.50662827745924],b=[-54.4760987982241,161.585836858041,-155.698979859887,66.8013118877197,-13.2806815528857],c=[-.00778489400243029,-.322396458041136,-2.40075827716184,-2.54973253934373,4.37466414146497,2.93816398269878],d=[.00778469570904146,.32246712907004,2.445134137143,3.75440866190742];let q,r;
 if(p<.02425){q=Math.sqrt(-2*Math.log(p));return (((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5])/((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1);}
@@ -12,7 +19,7 @@ if(p>1-.02425)return -invnorm(1-p);q=p-.5;r=q*q;return (((((a[0]*r+a[1])*r+a[2])
 function normalTail(x){const z=x/Math.sqrt(2),t=1/(1+.3275911*z);return (((((1.061405429*t-1.453152027)*t)+1.421413741)*t-.284496736)*t+.254829592)*t*Math.exp(-z*z);}
 const gaussianES=(a,alpha)=>-mean(a)+sd(a)*Math.exp(-(invnorm(alpha)**2)/2)/Math.sqrt(2*Math.PI)/(1-alpha);
 // Expose pure functions for reproducible cross-language checks.
-if(typeof module!=='undefined')module.exports={mean,sd,quantile,es,invnorm,normalTail,gaussianES};
+if(typeof module!=='undefined')module.exports={mean,sd,quantile,es,invnorm,normalTail,gaussianES,tailContributions,bestAllocation};
 if(typeof document==='undefined')return;
 const $=id=>document.getElementById(id),D=window.FINANCE_DATA;
 if(!D||!window.Plotly){$('error').textContent='The charts could not load. Please check your connection to the chart library; the CSV remains downloadable.';return;}
@@ -26,7 +33,7 @@ const line=(x,y,name,color,dash)=>({x,y,name,type:'scatter',mode:'lines',line:{c
 let curveCache=null;
 function render(){
 const A=$('asset-a').value,B=$('asset-b').value,ia=D.meta.columns.indexOf(A)+1,ib=D.meta.columns.indexOf(B)+1,p=$('period').value,w=+$('weight').value/100,alpha=+$('alpha').value,h=+$('threshold').value;
-const rows=D.rows.filter(r=>p==='all'||(p==='train'?r[0]<'2020-01-01':p==='test'?r[0]>='2020-01-01':r[0].startsWith(p)));
+const rows=D.rows.filter(r=>p==='all'||(p==='train10'?(r[0]>='2010-01-01'&&r[0]<'2020-01-01'):p==='train'?r[0]<'2020-01-01':p==='test'?r[0]>='2020-01-01':r[0].startsWith(p)));
 const a=rows.map(r=>r[ia]),b=rows.map(r=>r[ib]),r=a.map((v,i)=>w*v+(1-w)*b[i]),mu=mean(r),s=sd(r),n=r.length,z=r.map(x=>(x-mu)/s),hits=z.filter(x=>Math.abs(x)>h).length,expected=n*normalTail(h),e=es(r,alpha),g=gaussianES(r,alpha);
 $('weight-label').textContent=`${D.meta.names[A]}: ${Math.round(w*100)}% · B: ${Math.round((1-w)*100)}%`;
 $('summary').textContent=`${n.toLocaleString()} days · daily SD ${s.toFixed(2)}% · |standardized return| > ${h}: ${hits} days (normal reference ${expected.toFixed(1)}) · ${(alpha*100).toFixed(1)}% historical ES ${e.toFixed(2)}% loss vs normal ${g.toFixed(2)}%.`;
@@ -36,24 +43,34 @@ const maxz=Math.max(...z.map(Math.abs)),tx=Array.from({length:81},(_,i)=>maxz*i/
 const tl=layout('Magnitude threshold (SD units)','P(|standardized return| > x)');tl.yaxis.type='log';tl.yaxis.range=[Math.log10(1/(n*3)),0];tl.yaxis.tickvals=[1,.1,.01,.001,.0001,.00001];tl.yaxis.ticktext=['100%','10%','1%','0.1%','0.01%','0.001%'];tl.shapes=[{type:'line',x0:h,x1:h,y0:1/(n*3),y1:1,xref:'x',yref:'y',line:{color:orange,width:1,dash:'dot'}}];
 Plotly.react('tail',[line(tx,ty.map(v=>v>0?v:null),'Observed',blue),line(nx,ny,'Normal',gray,'dash')],tl,config);
 $('tail-comment').textContent=`Logarithmic y-axis. At ${h} SD: observed ${(hits/n*100).toFixed(2)}%, normal ${(normalTail(h)*100).toFixed(3)}%. Zero observed exceedances are omitted, rather than plotted as proof of zero risk.`;
-const qa=quantile(a,.05),qb=quantile(b,.05),joint=[],other=[];
-for(let i=0;i<n;i++)(a[i]<=qa&&b[i]<=qb?joint:other).push(i);
-const ma=mean(a),mb=mean(b),corr=a.reduce((v,x,i)=>v+(x-ma)*(b[i]-mb),0)/((n-1)*sd(a)*sd(b));
-const sc=(idx,name,color,size)=>({x:idx.map(i=>a[i]),y:idx.map(i=>b[i]),text:idx.map(i=>rows[i][0]),type:'scatter',mode:'markers',name,marker:{color,size,opacity:.65},hovertemplate:'%{text}<br>A: %{x:.2f}%<br>B: %{y:.2f}%<extra>%{fullData.name}</extra>'});
-const jl=layout(D.meta.names[A]+' return (%)',D.meta.names[B]+' return (%)');jl.shapes=[{type:'line',x0:qa,x1:qa,y0:0,y1:1,xref:'x',yref:'paper',line:{color:orange,width:1,dash:'dot'}},{type:'line',y0:qb,y1:qb,x0:0,x1:1,xref:'paper',yref:'y',line:{color:orange,width:1,dash:'dot'}}];
-Plotly.react('joint',[sc(other,'Other days',blue,3),sc(joint,'Both ≤ 5th percentile',orange,5)],jl,config);
-$('joint-comment').textContent=`Correlation ${corr.toFixed(2)}. Both industries are in their own bottom 5% on ${(100*joint.length/n).toFixed(2)}% of days (independence benchmark ≈ 0.25%). This finite-threshold frequency is not an asymptotic tail-dependence estimate.`;
+const tc=tailContributions(a,b,w,alpha),tailSet=new Set(tc.indices),other=rows.map((_,i)=>i).filter(i=>!tailSet.has(i));
+const sc=(idx,name,color,size)=>({x:idx.map(i=>-a[i]),y:idx.map(i=>-b[i]),text:idx.map(i=>rows[i][0]),type:'scatter',mode:'markers',name,marker:{color,size,opacity:.65},hovertemplate:'%{text}<br>A loss: %{x:.2f}%<br>B loss: %{y:.2f}%<extra>%{fullData.name}</extra>'});
+const jl=layout(D.meta.names[A]+' loss (%)',D.meta.names[B]+' loss (%)');
+Plotly.react('joint',[sc(other,'Other days',blue,3),sc(tc.indices,'Portfolio tail days',orange,5)],jl,config);
+$('joint-comment').textContent=`Orange: worst ${((1-alpha)*100).toFixed(1)}% of YOUR portfolio's probability mass. ES contributions: A ${tc.a.toFixed(2)} + B ${tc.b.toFixed(2)} = ${e.toFixed(2)} percentage points of loss. Boundary day is fractionally weighted. Change weights to change which days enter the tail.`;
 const key=[A,B,p,alpha].join('|');
-if(!curveCache||curveCache.key!==key){const ws=Array.from({length:101},(_,i)=>i),hist=[],norm=[];for(const v of ws){const vrs=a.map((x,i)=>v/100*x+(1-v/100)*b[i]);hist.push(es(vrs,alpha));norm.push(gaussianES(vrs,alpha));}curveCache={key,ws,hist,norm};}
-const {ws,hist,norm}=curveCache,rl=layout('Weight in industry A (%)',`${(100*alpha).toFixed(1)}% ES · daily loss (%)`);rl.shapes=[{type:'line',x0:w*100,x1:w*100,y0:0,y1:1,xref:'x',yref:'paper',line:{color:orange,width:1,dash:'dot'}}];
-Plotly.react('risk',[line(ws,hist,'Historical ES',blue),line(ws,norm,'Normal ES',gray,'dash'),{x:[w*100],y:[e],type:'scatter',mode:'markers',name:'Your allocation',marker:{color:orange,size:9}}],rl,config);
-const min=Math.min(...hist),wi=hist.indexOf(min);
-$('risk-comment').textContent=`Selected-period minimum on a 1% weight grid: ${wi}% A, ES ${min.toFixed(2)}%. Tail mass: ${(n*(1-alpha)).toFixed(1)} observations. This is an in-sample comparison, not a future-optimal allocation.`;
+if(!curveCache||curveCache.key!==key){const ws=Array.from({length:101},(_,i)=>i),hist=[],norm=[],means=[];for(const v of ws){const vrs=a.map((x,i)=>v/100*x+(1-v/100)*b[i]);hist.push(es(vrs,alpha));norm.push(gaussianES(vrs,alpha));means.push(mean(vrs));}curveCache={key,ws,hist,norm,means};}
+const {ws,hist,norm,means}=curveCache,budget=+$('budget').value,bi=bestAllocation(hist,means,budget),bn=bestAllocation(norm,means,budget);
+$('budget-label').textContent=`ES budget: ${budget.toFixed(2)}% daily loss`;
+const rl=layout(`${(100*alpha).toFixed(1)}% ES · daily loss (%)`,'Estimated mean daily return (%)');
+rl.shapes=[{type:'line',x0:budget,x1:budget,y0:0,y1:1,xref:'x',yref:'paper',line:{color:orange,width:1,dash:'dot'}}];
+const curve=(risks,name,color,dash)=>({x:risks,y:means,customdata:ws,type:'scatter',mode:'lines',name,line:{color,width:2,dash},hovertemplate:'A weight: %{customdata}%<br>ES: %{x:.2f}%<br>Mean: %{y:.3f}%<extra>%{fullData.name}</extra>'});
+const traces=[curve(hist,'Historical',blue,'solid'),curve(norm,'Normal',gray,'dash'),{x:[e],y:[mu],type:'scatter',mode:'markers',name:'Your weights',marker:{color:orange,size:9}}];
+if(bi>=0)traces.push({x:[hist[bi]],y:[means[bi]],name:'Best feasible · historical',showlegend:false,mode:'markers',type:'scatter',marker:{color:blue,symbol:'star',size:12}});
+if(bn>=0)traces.push({x:[norm[bn]],y:[means[bn]],name:'Best feasible · normal',showlegend:false,mode:'markers',type:'scatter',marker:{color:gray,symbol:'diamond-open',size:10}});
+rl.legend.y=1.25;rl.margin.t=60;
+Plotly.react('risk',traces,rl,config);
+$('apply-best').disabled=bi<0;$('apply-best').dataset.weight=bi;
+const historical=bi<0?'Historical: no feasible allocation.':`Historical: ${bi}% A, mean ${means[bi].toFixed(3)}%, ES ${hist[bi].toFixed(2)}%.`;
+const normal=bn<0?'Normal: no feasible allocation.':`Normal: ${bn}% A; its observed ES is ${hist[bn].toFixed(2)}%.`;
+$('risk-comment').textContent=`Highest mean LEFT of the budget line. Star: historical optimum; open diamond: normal optimum. ${historical} ${normal} Selected-period estimates, 1% weight grid; no future guarantee.`;
 const worst=r.map((v,i)=>({v,date:rows[i][0]})).sort((x,y)=>x.v-y.v).slice(0,8);
 $('extremes').replaceChildren(...worst.map(o=>{const tr=document.createElement('tr');for(const v of [o.date,o.v.toFixed(2)+'%',(-o.v).toFixed(2)+'%']){const td=document.createElement('td');td.textContent=v;tr.append(td);}return tr;}));
 }
 let timer;
-for(const id of ['asset-a','asset-b','period','weight','threshold','alpha'])$(id).addEventListener('input',()=>{clearTimeout(timer);timer=setTimeout(render,60);});
+for(const id of ['asset-a','asset-b','period','weight','threshold','alpha','budget'])$(id).addEventListener('input',()=>{clearTimeout(timer);timer=setTimeout(render,60);});
+$('apply-best').addEventListener('click',()=>{if(!$('apply-best').disabled){$('weight').value=$('apply-best').dataset.weight;render();}});
+$('worked-example').addEventListener('click',()=>{$('asset-a').value='HiTec';$('asset-b').value='Utils';$('period').value='train10';$('alpha').value='0.975';$('budget').value='2.5';$('weight').value='50';render();});
 render();
 new ResizeObserver(()=>parent.postMessage({type:'financeLabResize',height:Math.ceil(document.body.getBoundingClientRect().height)+32},location.origin)).observe(document.body);
 })();
