@@ -1,0 +1,27 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ten-industry portfolio — allocation and expected shortfall</title>
+<link rel="stylesheet" href="lab.css"><script defer src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<script defer src="portfolio-data.js"></script><script defer src="portfolio.js"></script>
+</head><body>
+<h1>Allocate across ten U.S. industries</h1>
+<p>Training: <strong>2010–2019</strong>. Evaluation: <strong>2020–2025</strong>. Each industry is a value-weighted stock portfolio; the equal-weight benchmark invests 10% in each industry.</p>
+<div class="controls">
+<label>ES confidence<select id="alpha"><option value="0.95">95% · worst 5%</option><option value="0.975" selected>97.5% · worst 2.5%</option><option value="0.99">99% · worst 1%</option></select></label>
+<label>Choose portfolio<select id="strategy"><option value="historical">Optimize with historical ES</option><option value="gaussian">Optimize with normal ES</option><option value="equal">Equal weight · 10% each</option></select></label>
+<label><span id="budget-label">Training ES budget</span><input id="budget" type="range" min="0" max="50" value="22" step="1" aria-label="Training ES budget"></label>
+</div>
+<p id="error" role="alert"></p><div id="summary" class="readout" aria-live="polite">Loading allocations…</div>
+<section><h2>3. Capital weights and tail-loss contributions</h2>
+<div class="grid"><div id="weights" class="chart" role="img" aria-label="Capital weights across ten industries"></div><div id="contributions" class="chart" role="img" aria-label="Industry contributions to historical portfolio expected shortfall"></div></div>
+<p id="contribution-note" class="muted"></p></section>
+<section><h2>4. Estimated mean–ES efficient frontier</h2><div id="frontier" class="chart wide" role="img" aria-label="Estimated efficient frontiers under historical and normal expected shortfall"></div>
+<p id="frontier-note" class="muted"></p></section>
+<h2>Freeze these weights: what happens in the later sample?</h2>
+<div class="table-wrap"><table><thead><tr><th>Period</th><th>Mean daily return</th><th>Historical ES</th><th>Normal ES estimate</th></tr></thead><tbody id="results"></tbody></table></div>
+<p class="muted">The frontier uses training data only. Daily rebalancing maintains the chosen weights; costs are excluded. Later-sample ES can exceed the training budget. Changing controls after seeing evaluation results is exploratory analysis.</p>
+<details><summary>Construction and reproducibility</summary>
+<p class="muted">Published universe: 10Ind in DeMiguel, Garlappi, Nogales &amp; Uppal (2009), Table 1. This is a new daily-data mean–ES exercise using that universe. Its periods, objective and estimates differ from the paper's monthly experiment.</p>
+<p class="muted">Each budget selects a precomputed optimum among all ten long-only weights. Historical optimization: linear programming. Normal optimization: convex mean–ES constraint. Curves connect solutions at 51 budget levels; intermediate curve segments are visual guides. Infeasible budgets show no optimal allocation.</p>
+<p class="muted"><a href="portfolio_study.py" download>Calculation script</a> · <a href="portfolio-results.json" download>All weights and results</a> · <a href="returns.json" download>Input data</a></p></details>
+</body></html>

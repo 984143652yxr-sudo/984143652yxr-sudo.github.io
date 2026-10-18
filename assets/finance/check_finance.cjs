@@ -47,3 +47,33 @@ for(const model of allocation.methods){
  assert.equal(F.bestAllocation(risks,means,2.5),Math.round(model.technology_weight*100));
 }
 console.log('Pass: tail contributions sum to ES, infeasible budgets, and independent constrained allocation results.');
+const multi=read('portfolio-results.json');
+const frontier=require('./portfolio.js').frontier;
+const train10=rows.filter(r=>r[0]>='2010-01-01'&&r[0]<'2020-01-01'),test10=rows.filter(r=>r[0]>='2020-01-01');
+for(const [alphaKey,study] of Object.entries(multi.levels)){
+ const alpha=+alphaKey;
+ for(const method of ['historical','gaussian']){
+  let last=-Infinity;
+  for(const [i,s] of study[method].entries()){
+   if(!s)continue;
+   const r=train10.map(row=>s.weights.reduce((sum,w,j)=>sum+w*row[j+1],0));
+   const te=test10.map(row=>s.weights.reduce((sum,w,j)=>sum+w*row[j+1],0));
+   assert(Math.abs(s.weights.reduce((a,b)=>a+b,0)-1)<1e-7);
+   assert(s.weights.every(w=>w>=-1e-7));
+   assert(Math.abs(F.mean(r)-s.mean)<1e-10);
+   assert(Math.abs(F.es(r,alpha)-s.es)<1e-8);
+   assert(Math.abs(F.gaussianES(r,alpha)-s.normal_es)<1e-7);
+   assert(Math.abs(F.es(te,alpha)-s.test_es)<1e-8);
+   assert(Math.abs(F.mean(te)-s.test_mean)<1e-10);
+   assert(Math.abs(s.contributions.reduce((a,b)=>a+b,0)-s.es)<1e-9);
+   assert(s[method==='historical'?'es':'normal_es']<=study.budgets[i]+1e-6);
+   assert(s.mean>=last-1e-7);last=s.mean;
+  }
+  const f=frontier(study[method],method==='historical'?'es':'normal_es');
+  assert(f.length>2);
+  for(let i=1;i<f.length;i++)assert(f[i].mean>f[i-1].mean);
+ }
+ assert.equal(study.historical[0],null);
+ assert.equal(study.gaussian[0],null);
+}
+console.log('Pass: all ten-industry allocations independently recomputed, feasibility, later-sample results, ES additivity, and efficient boundary.');

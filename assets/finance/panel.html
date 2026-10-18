@@ -1,38 +1,23 @@
-<!doctype html>
-<html lang="en">
-<head>
+<!doctype html><html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Heavy tails and portfolio weights — interactive lab</title>
-<style>
-*{box-sizing:border-box}body{margin:0;padding:16px;font:15px/1.55 system-ui,sans-serif;color:#23313f;background:#fff}h1{font-size:23px;margin:0 0 8px}h2{font-size:17px;margin:18px 0 4px}p{margin:6px 0 12px}.muted{color:#54616d;font-size:13px}label{min-width:0;display:flex;flex-direction:column;gap:4px;font-size:14px}select,input{font:inherit;min-height:40px}select{width:100%;min-width:0;padding:5px;border:1px solid #b9c6cf;border-radius:4px;background:#fff;color:#23313f}input[type=range]{width:100%;accent-color:#277b99}.controls{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:18px 0}.readout{padding:12px 14px;background:#f1f7fa;border-left:3px solid #277b99;font-variant-numeric:tabular-nums;min-height:84px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.chart{height:320px;min-width:0}.plot-block{min-width:0}a{color:#226484}button{font:inherit;padding:8px 12px;background:#eef5f8;color:#23313f;border:1px solid #a9bcc8;border-radius:4px}details{margin-top:12px}summary{cursor:pointer}table{border-collapse:collapse;width:100%;font-size:13px}th,td{text-align:left;padding:6px;border-bottom:1px solid #dae3e9}#error{color:#a22}#tail-comment,#joint-comment,#risk-comment{min-height:42px} @media(max-width:620px){.controls{grid-template-columns:repeat(2,minmax(0,1fr))}.grid{grid-template-columns:1fr}.chart{height:310px}body{padding:12px}}@media(max-width:370px){.controls{grid-template-columns:1fr}}
-</style>
+<title>Heavy-tail diagnostics — one return distribution</title>
+<link rel="stylesheet" href="lab.css">
 <script defer src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
-<script defer src="data.js"></script>
-<script defer src="panel.js"></script>
-</head>
-<body>
-<h1>Heavy tails and portfolio weights</h1>
-<p>Choose two stock-industry portfolios. Start at 100% A to inspect one industry. Mix A and B, then maximize estimated return under an expected-shortfall (ES) budget.</p>
+<script defer src="data.js"></script><script defer src="math.js"></script><script defer src="panel.js"></script>
+</head><body>
+<h1>Explore one return distribution</h1>
+<p>Choose an industry and a period. Compare its standardized daily returns with a normal reference.</p>
 <div class="controls">
-<label>Industry A<select id="asset-a" aria-label="Industry A"></select></label>
-<label>Industry B<select id="asset-b" aria-label="Industry B"></select></label>
-<label>Observation period<select id="period"><option value="all">2000–2025 · full sample</option><option value="train10">2010–2019 · worked example</option><option value="train">2000–2019 · training</option><option value="test">2020–2025 · held-out</option><option value="2008">2008 · financial crisis</option><option value="2017">2017 · quiet year</option><option value="2020">2020 · pandemic</option><option value="2022">2022</option></select></label>
-<label><span id="weight-label">Industry A weight: 50%</span><input id="weight" type="range" min="0" max="100" step="1" value="50" aria-label="Industry A weight"></label>
+<label>Industry portfolio<select id="asset" aria-label="Industry portfolio"></select></label>
+<label>Observation period<select id="period"><option value="all">2000–2025 · full sample</option><option value="2008">2008 · financial crisis</option><option value="2017">2017 · quiet year</option><option value="2020">2020 · pandemic</option><option value="2022">2022</option></select></label>
 <label>Tail threshold<select id="threshold"><option value="2">2 standard deviations</option><option value="3" selected>3 standard deviations</option><option value="4">4 standard deviations</option></select></label>
-<label>ES confidence<select id="alpha"><option value="0.95">95%</option><option value="0.975" selected>97.5%</option><option value="0.99">99%</option></select></label>
-<label><span id="budget-label">ES budget: 4.00% daily loss</span><input id="budget" type="range" min="0.5" max="15" step="0.05" value="4" aria-label="ES budget"></label>
 </div>
-<p><button id="worked-example" type="button">Load worked example</button> <button id="apply-best" type="button">Apply historical optimal weights</button></p>
-<p id="error" role="alert"></p>
-<div id="summary" class="readout" aria-live="polite">Loading the historical sample…</div>
+<p id="error" role="alert"></p><div id="summary" class="readout" aria-live="polite">Loading returns…</div>
 <div class="grid">
-<section class="plot-block"><h2>1. Normal Q–Q plot</h2><div id="qq" class="chart" role="img" aria-label="Normal theoretical quantiles against standardized portfolio returns"></div><p class="muted">A heavy lower tail bends below the diagonal; a heavy upper tail bends above it. Hover for the date of an observation.</p></section>
-<section class="plot-block"><h2>2. How often is a move this large?</h2><div id="tail" class="chart" role="img" aria-label="Empirical absolute standardized return exceedance probability compared with normal theory on a logarithmic vertical axis"></div><p id="tail-comment" class="muted"></p></section>
-<section class="plot-block"><h2>3. Which assets contribute to tail losses?</h2><div id="joint" class="chart" role="img" aria-label="Industry losses with the selected portfolio tail days highlighted"></div><p id="joint-comment" class="muted"></p></section>
-<section class="plot-block"><h2>4. Maximum return within a tail-loss budget</h2><div id="risk" class="chart" role="img" aria-label="Estimated mean return versus expected shortfall for different weights, with risk budget and optimal feasible allocations"></div><p id="risk-comment" class="muted"></p></section>
+<section class="plot-block"><h2>1. How large are the extremes?</h2><div id="qq" class="chart" role="img" aria-label="Normal Q-Q plot of one industry's standardized returns"></div><p class="muted">Normal Q–Q plot: a lower tail below the diagonal and an upper tail above it indicate larger extremes than the normal reference.</p></section>
+<section class="plot-block"><h2>2. How frequent are large moves?</h2><div id="tail" class="chart" role="img" aria-label="Observed versus normal exceedance probabilities"></div><p id="tail-comment" class="muted"></p></section>
 </div>
-<details><summary>Largest portfolio losses in this sample</summary><table><thead><tr><th>Date</th><th>Portfolio return</th><th>Loss</th></tr></thead><tbody id="extremes"></tbody></table></details>
-<p class="muted" id="provenance"></p>
-<p class="muted">Weights are fixed at the start of each day (daily rebalancing); costs are excluded. Industries are research portfolios, not individual stocks or ETFs. Optimizers use the selected period only; the results are in-sample estimates. A finite sample cannot establish an asymptotic tail law.</p>
-<p class="muted"><a href="returns.csv" download>Download returns (CSV)</a> · <a href="prepare_data.py" download>Reproduce the data and allocation study</a> · <a href="https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/Data_Library/det_10_ind_port.html" target="_blank" rel="noopener">Source and construction</a></p>
+<details><summary>Largest daily losses in the selected sample</summary><table><thead><tr><th>Date</th><th>Return (%)</th><th>Standardized return</th></tr></thead><tbody id="extremes"></tbody></table></details>
+<p class="muted">Each industry contains many stocks. These plots describe industry returns. Pooling calm and volatile days can itself produce a heavy-looking unconditional tail; a finite sample cannot establish a power law.</p>
+<p class="muted"><a href="returns.csv" download>Download returns</a> · <a href="https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/Data_Library/det_10_ind_port.html" target="_blank" rel="noopener">French Data Library: portfolio construction</a></p>
 </body></html>

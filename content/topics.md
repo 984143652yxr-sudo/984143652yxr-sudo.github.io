@@ -52,6 +52,6 @@ Mathematical derivations and small executable examples for understanding how lan
 
 Statistical models for financial data, with interactive diagnostics and reproducible portfolio examples.
 
-**Start here:** [Heavy tails in finance: from return distributions to portfolio decisions]({{base}}/diary/finance-heavy-tails/) — explore stock-industry allocations, compare tail probabilities with a normal model, and study expected shortfall and extreme-value methods.
+**Start here:** [Heavy tails in finance: from return distributions to portfolio decisions]({{base}}/diary/finance-heavy-tails/) — diagnose extreme returns in one panel, then explore a ten-industry mean–ES frontier in a separate allocation lab.
 
 </section>

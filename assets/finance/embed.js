@@ -1,9 +1,8 @@
 (function(){
-const frame=document.getElementById('finance-lab');
-if(!frame)return;
 window.addEventListener('message',e=>{
-if(e.origin!==location.origin||e.source!==frame.contentWindow||e.data?.type!=='financeLabResize')return;
+if(e.origin!==location.origin||e.data?.type!=='financeLabResize')return;
+const frame=[...document.querySelectorAll('iframe[data-finance-lab]')].find(f=>e.source===f.contentWindow);
 const h=Number(e.data.height);
-if(Number.isFinite(h)&&h>300&&h<5000)frame.style.height=h+'px';
+if(frame&&Number.isFinite(h)&&h>300&&h<6000)frame.style.height=h+'px';
 });
 })();
