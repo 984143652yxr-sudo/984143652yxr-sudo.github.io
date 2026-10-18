@@ -1,6 +1,6 @@
 # Study Topics
 
-<p class="lead">Study notes on statistical genetics and the mathematical mechanisms of language models.</p>
+<p class="lead">Study notes on statistical genetics, language models, and financial risk.</p>
 
 These sections organize the questions in my study diary. The linked entries document learning and ongoing replication work.
 
@@ -43,5 +43,15 @@ A replication is a sequence of decisions about data, models, and evidence. I wan
 Mathematical derivations and small executable examples for understanding how language models represent and process a sequence.
 
 **Position and attention:** [Rotary position embeddings: from rotations to attention]({{base}}/diary/rotary-position-embedding/) — relative-position geometry, coordinate pairing, and numerical checks.
+
+</section>
+
+<section class="research-block" markdown="1">
+
+## Finance: returns, dependence, and portfolio risk
+
+Statistical models for financial data, with interactive diagnostics and reproducible portfolio examples.
+
+**Start here:** [Heavy tails in finance: from return distributions to portfolio decisions]({{base}}/diary/finance-heavy-tails/) — explore stock-industry allocations, compare tail probabilities with a normal model, and study expected shortfall and extreme-value methods.
 
 </section>

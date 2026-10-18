@@ -1,0 +1,44 @@
+{
+  "train_n": 5031,
+  "test_n": 1508,
+  "alpha": 0.975,
+  "pair": [
+    "HiTec",
+    "Utils"
+  ],
+  "allocations": [
+    {
+      "method": "50/50",
+      "technology_weight": 0.5,
+      "train_sd": 1.1925500716446742,
+      "train_es": 3.4552504472271908,
+      "test_sd": 1.341519537384033,
+      "test_es": 4.036525198938991,
+      "test_mean": 0.06938328912466843
+    },
+    {
+      "method": "Minimum variance",
+      "technology_weight": 0.19,
+      "train_sd": 1.0939816991742108,
+      "train_es": 3.280343410852712,
+      "test_sd": 1.3059845953151465,
+      "test_es": 3.9880997347480096,
+      "test_mean": 0.05316379310344828
+    },
+    {
+      "method": "Minimum ES",
+      "technology_weight": 0.2,
+      "train_sd": 1.0940962666506995,
+      "train_es": 3.280321208507254,
+      "test_sd": 1.3043011538154172,
+      "test_es": 3.979734748010609,
+      "test_mean": 0.05368700265251989
+    }
+  ],
+  "default": {
+    "n": 6539,
+    "sd": 1.2284746229954642,
+    "over_3sd": 100,
+    "normal_expected": 17.65396645765839
+  }
+}
