@@ -77,3 +77,11 @@ for(const [alphaKey,study] of Object.entries(multi.levels)){
  assert.equal(study.gaussian[0],null);
 }
 console.log('Pass: all ten-industry allocations independently recomputed, feasibility, later-sample results, ES additivity, and efficient boundary.');
+const gaps=require('./portfolio.js').gaps;
+const base=multi.levels['0.975'],normalChoice=base.gaussian[22],historicalChoice=base.historical[22];
+assert(Math.abs(gaps(normalChoice,base.budgets[22]).underestimate-.72)<.01);
+assert(Math.abs(gaps(normalChoice,base.budgets[22]).budgetExcess-.72)<.01);
+assert(Math.abs(normalChoice.test_es-historicalChoice.test_es-.86)<.01);
+assert(gaps(historicalChoice,base.budgets[22]).budgetExcess<1e-6);
+assert.deepEqual(gaps({es:2,normal_es:3},2.5),{underestimate:-1,budgetExcess:-.5});
+console.log('Pass: directional risk gaps, budget excess, later comparison, and negative-gap interpretation.');

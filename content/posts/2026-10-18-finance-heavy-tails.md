@@ -132,9 +132,28 @@ $$
 
 Historical ES uses **observed joint loss scenarios**. Normal ES uses **means and covariances**. With the same mean objective and budget, a smaller modelled tail risk permits more exposure to high-mean assets. The two allocations can therefore differ even on the same training data.
 
-### Interactive lab B · allocation and frontier
+### Figure 4 notation · one return objective, two risk estimates
 
-**Start with “Equal weight,” then select “Optimize with historical ES.”** Move the budget to see which allocations become feasible. Switch to normal ES to compare the risk estimate with the observed tail loss of the same weights.
+For any weight vector $w$, define
+
+$$
+m(w)=\widehat\mu^\top w,\qquad
+H_\alpha(w)=\widehat{\operatorname{ES}}^{\mathrm{historical}}_\alpha(-w^\top r),\qquad
+N_\alpha(w)=\widehat{\operatorname{ES}}^{\mathrm{normal}}_\alpha(-w^\top r).
+$$
+
+Both allocations maximize the **same estimated mean** over $\mathcal W=\{w:w\ge0,\ \mathbf1^\top w=1\}$:
+
+$$
+w_H(b)\in\arg\max_{w\in\mathcal W}\{m(w):H_\alpha(w)\le b\},\qquad
+w_N(b)\in\arg\max_{w\in\mathcal W}\{m(w):N_\alpha(w)\le b\}.
+$$
+
+The selector chooses $w^*$ from $w_H(b)$, $w_N(b)$, or the equal-weight portfolio. Confidence $\alpha$ specifies the tail fraction $1-\alpha$; budget $b$ limits its average loss.
+
+### Interactive lab B · follow the selected point from A to B
+
+Start with **Optimize with normal ES**. Point A reports its normal-model risk; point B remeasures the **same weights** with historical losses. The arrow isolates the change in risk estimate. The table compares the normal-chosen and historical-chosen allocations at the same budget.
 
 <iframe id="portfolio-lab" data-finance-lab src="{{base}}/assets/finance/portfolio.html" title="Ten-industry mean–ES allocation and efficient frontier" style="width:100%;height:1510px;border:1px solid #d8e2e9;border-radius:6px;" loading="lazy"></iframe>
 <script src="{{base}}/assets/finance/embed.js" defer></script>
@@ -153,17 +172,52 @@ $$
 
 The left bars show capital weights; the right bars show each industry's losses **on the portfolio's bad days**. Changing weights also changes which days enter the tail. This is how joint downside behaviour affects diversification: an asset that gains on those days can have a negative contribution.
 
-### Read Figure 4 · an efficient frontier
+### Read Figure 4 · curves, points and favorable directions
 
-The feasible set contains all attainable pairs $(\operatorname{ES}_\alpha(w),\widehat\mu^\top w)$. Its efficient boundary retains portfolios for which no other allocation has both **lower or equal ES and higher or equal mean**, with one strict improvement.
+Each curve traces allocations as the budget $b$ varies:
+
+| Visual | Coordinates $(\text{risk},\text{mean})$ | Interpretation |
+|---|---|---|
+| **Blue solid**, $\Gamma_H$ | $(H_\alpha(w_H(b)),m(w_H(b)))$ | Historical-ES efficient frontier |
+| **Gray dashed**, $\Gamma_N$ | $(N_\alpha(w_N(b)),m(w_N(b)))$ | Efficient frontier under the normal model |
+| **Orange dotted**, $\Gamma_{N\to H}$ | $(H_\alpha(w_N(b)),m(w_N(b)))$ | Normal-chosen allocations evaluated using historical ES |
+| **Hollow A** | $(N_\alpha(w^*),m(w^*))$ | Selected weights: normal risk estimate |
+| **Filled B** | $(H_\alpha(w^*),m(w^*))$ | Same selected weights: historical risk estimate |
+| **Vertical dotted line** | $x=b$ | Allowed ES budget |
+| **Diamond** | $(H_\alpha(w^{\mathrm{EW}}),m(w^{\mathrm{EW}}))$ | Equal-weight benchmark |
+
+**Favorable direction: upper left, using the same risk measure.** At equal mean, lower ES is preferable; at equal ES, higher mean is preferable. Higher mean with higher ES requires a risk–return trade-off.
+
+Compare **blue with orange** to evaluate allocation quality under historical ES. Gray lies on a different model's risk scale: its apparent advantage can disappear when those weights are re-evaluated. Orange is an allocation path; blue is the historical efficient boundary. In this sample, orange closely follows blue: the normal-chosen portfolios can remain near-efficient at their **higher historical risk**. The prominent problem is the understated budget needed to hold them. The plotted curves connect a finite grid of optimized solutions.
+
+### Read the table · three distinct meanings of “loss”
+
+**1. Risk underestimation, holding weights fixed:**
 
 $$
-f(b)=\max_w\{\widehat\mu^\top w:\operatorname{ES}_\alpha(w)\le b,\ w\ge0,\ \mathbf1^\top w=1\}.
+\Delta_{\mathrm{risk}}(w^*)=H_\alpha(w^*)-N_\alpha(w^*).
 $$
 
-Each displayed solution maximizes mean under one budget. The blue and dashed frontiers use different risk models; **the x-axis is ES, rather than standard deviation**. For normal-optimized weights, the horizontal orange segment connects their normal risk estimate to their historical ES. Both endpoints have the same mean and weights.
+A positive value moves A **rightward** to B. At the default settings, normal-chosen weights report $N_\alpha=2.34\%$ but have $H_\alpha=3.06\%$: the tail average is underestimated by approximately **0.72 percentage points**. Both use 2010–2019; no future data enter this comparison.
 
-**What the exercise establishes:** tail modelling changes risk estimates, feasible allocations and the estimated frontier. The evaluation table shows what those fixed weights subsequently experienced. Heavy tails supply risk information; higher future returns depend on expected-return estimation and realised outcomes.
+**2. Excess over the allowed budget:**
+
+$$
+\Delta_{\mathrm{budget}}(w^*)=H_\alpha(w^*)-b.
+$$
+
+Positive means B lies **right of the budget line**. A portfolio accepted by the normal model can therefore exceed the historical-ES limit. For the default normal-chosen portfolio, the excess is also about 0.72 pp because its normal constraint is binding.
+
+**3. Later-period comparison of two different allocations:** define $H^{\mathrm{test}}_\alpha$ using 2020–2025, with each portfolio's training weights fixed.
+
+$$
+\Delta_{\mathrm{test}}
+=H^{\mathrm{test}}_\alpha(w_N(b))-H^{\mathrm{test}}_\alpha(w_H(b)).
+$$
+
+At the default settings, the normal-chosen portfolio has later ES **4.54%**, versus **3.68%** for the historical-chosen portfolio: approximately **0.86 pp more average tail loss**. Its later mean daily return is also higher, **0.086% versus 0.054%**. The table updates both sides of this trade-off.
+
+These ES differences describe tail averages. Each allocation's ES uses **its own worst $1-\alpha$ fraction of days**, which may be different dates. They are neither a daily loss charged to the portfolio nor a causal estimate of damage from the normal assumption; the later period also reflects changing market conditions.
 
 <details markdown="1">
 <summary>Data, scope and reproducibility</summary>

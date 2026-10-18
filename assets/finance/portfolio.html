@@ -7,19 +7,33 @@
 <h1>Allocate across ten U.S. industries</h1>
 <p>Training: <strong>2010–2019</strong>. Evaluation: <strong>2020–2025</strong>. Each industry is a value-weighted stock portfolio; the equal-weight benchmark invests 10% in each industry.</p>
 <div class="controls">
-<label>ES confidence<select id="alpha"><option value="0.95">95% · worst 5%</option><option value="0.975" selected>97.5% · worst 2.5%</option><option value="0.99">99% · worst 1%</option></select></label>
-<label>Choose portfolio<select id="strategy"><option value="historical">Optimize with historical ES</option><option value="gaussian">Optimize with normal ES</option><option value="equal">Equal weight · 10% each</option></select></label>
+<label>ES confidence α<select id="alpha"><option value="0.95">95% · worst 5%</option><option value="0.975" selected>97.5% · worst 2.5%</option><option value="0.99">99% · worst 1%</option></select></label>
+<label>Choose portfolio<select id="strategy"><option value="historical">Optimize with historical ES</option><option value="gaussian" selected>Optimize with normal ES</option><option value="equal">Equal weight · 10% each</option></select></label>
 <label><span id="budget-label">Training ES budget</span><input id="budget" type="range" min="0" max="50" value="22" step="1" aria-label="Training ES budget"></label>
 </div>
 <p id="error" role="alert"></p><div id="summary" class="readout" aria-live="polite">Loading allocations…</div>
 <section><h2>3. Capital weights and tail-loss contributions</h2>
 <div class="grid"><div id="weights" class="chart" role="img" aria-label="Capital weights across ten industries"></div><div id="contributions" class="chart" role="img" aria-label="Industry contributions to historical portfolio expected shortfall"></div></div>
 <p id="contribution-note" class="muted"></p></section>
-<section><h2>4. Estimated mean–ES efficient frontier</h2><div id="frontier" class="chart wide" role="img" aria-label="Estimated efficient frontiers under historical and normal expected shortfall"></div>
-<p id="frontier-note" class="muted"></p></section>
-<h2>Freeze these weights: what happens in the later sample?</h2>
-<div class="table-wrap"><table><thead><tr><th>Period</th><th>Mean daily return</th><th>Historical ES</th><th>Normal ES estimate</th></tr></thead><tbody id="results"></tbody></table></div>
-<p class="muted">The frontier uses training data only. Daily rebalancing maintains the chosen weights; costs are excluded. Later-sample ES can exceed the training budget. Changing controls after seeing evaluation results is exploratory analysis.</p>
+<section><h2>4. Read the frontier: reported risk → historical risk</h2>
+<p class="direction"><strong>↑ Higher estimated return · ← Lower tail loss.</strong><br>Compare blue with orange on the same historical-risk scale. Gray shows what the normal model predicts.</p>
+<p class="muted math">m(w) = μ̂ᵀw; H<sub>α</sub>(w) = training historical ES; N<sub>α</sub>(w) = training normal ES.<br>w<sub>H</sub>(b) and w<sub>N</sub>(b) maximize m(w) under H<sub>α</sub>(w) ≤ b and N<sub>α</sub>(w) ≤ b, respectively.</p>
+<div class="curve-key">
+<div><span class="swatch blue"></span><strong>Blue · historical frontier</strong><br><span class="math">Γ<sub>H</sub> = {(H<sub>α</sub>(w<sub>H</sub>(b)), m(w<sub>H</sub>(b)))}</span><br>Choose weights and measure risk using historical losses.</div>
+<div><span class="swatch gray"></span><strong>Gray dashed · normal frontier</strong><br><span class="math">Γ<sub>N</sub> = {(N<sub>α</sub>(w<sub>N</sub>(b)), m(w<sub>N</sub>(b)))}</span><br>Choose weights and report risk assuming normal returns.</div>
+<div><span class="swatch orange"></span><strong>Orange dotted · normal weights, historical risk</strong><br><span class="math">Γ<sub>N→H</sub> = {(H<sub>α</sub>(w<sub>N</sub>(b)), m(w<sub>N</sub>(b)))}</span><br>Keep the normal-chosen weights; remeasure their risk using historical losses. This is an allocation path, not an efficient frontier.</div>
+</div>
+<p id="selection-equation" class="math"></p>
+<div id="frontier" class="chart wide" role="img" aria-label="Historical frontier, normal frontier, and normal allocations re-evaluated with historical expected shortfall"></div>
+<p class="muted math">A ○ = (N<sub>α</sub>(w*), m(w*)) · B ● = (H<sub>α</sub>(w*), m(w*)) · ◆ = equal-weight portfolio measured with H<sub>α</sub>.<br>A → B keeps the same weights. The dotted vertical line x = b is the ES budget.</p>
+<p id="frontier-note" class="readout compact" aria-live="polite"></p>
+<p class="muted">Favorable comparison: on the historical-risk scale, move left for the same mean, or up for the same ES. Gray appearing farther left reflects a different risk estimate; compare blue and orange to assess allocations under one metric.</p></section>
+<h2>What does using the normal model cost in tail risk?</h2>
+<p>Compare two allocations chosen with the <strong>same α, budget b, training data and mean-return objective</strong>. All ES entries are average losses in the portfolio's worst 1 − α fraction of days.</p>
+<div class="table-wrap"><table><thead><tr><th>Quantity</th><th>Normal-chosen<br><span class="math">w<sub>N</sub>(b)</span></th><th>Historical-chosen<br><span class="math">w<sub>H</sub>(b)</span></th></tr></thead><tbody id="results"></tbody></table></div>
+<p id="comparison-note" class="readout compact" aria-live="polite"></p>
+<p class="muted"><strong>Three different comparisons:</strong> H − N is risk underestimation for identical weights; H − b is excess over the training budget; the later-sample ES difference compares two allocations. A percentage-point ES difference is a difference in tail averages, rather than an extra loss incurred every day.</p>
+<p class="muted">Weights are fitted on 2010–2019 and held at fixed targets by daily rebalancing in 2020–2025. Costs are excluded. Later-period outcomes also reflect market changes; the comparison does not isolate a causal effect of the normal assumption.</p>
 <details><summary>Construction and reproducibility</summary>
 <p class="muted">Published universe: 10Ind in DeMiguel, Garlappi, Nogales &amp; Uppal (2009), Table 1. This is a new daily-data mean–ES exercise using that universe. Its periods, objective and estimates differ from the paper's monthly experiment.</p>
 <p class="muted">Each budget selects a precomputed optimum among all ten long-only weights. Historical optimization: linear programming. Normal optimization: convex mean–ES constraint. Curves connect solutions at 51 budget levels; intermediate curve segments are visual guides. Infeasible budgets show no optimal allocation.</p>
