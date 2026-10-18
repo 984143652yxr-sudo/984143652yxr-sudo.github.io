@@ -155,7 +155,7 @@ The selector chooses $w^*$ from $w_H(b)$, $w_N(b)$, or the equal-weight portfoli
 
 Start with **Optimize with normal ES**. Point A reports its normal-model risk; point B remeasures the **same weights** with historical losses. The arrow isolates the change in risk estimate. The table compares the normal-chosen and historical-chosen allocations at the same budget.
 
-<iframe id="portfolio-lab" data-finance-lab src="{{base}}/assets/finance/portfolio.html" title="Ten-industry mean–ES allocation and efficient frontier" style="width:100%;height:1510px;border:1px solid #d8e2e9;border-radius:6px;" loading="lazy"></iframe>
+<iframe id="portfolio-lab" data-finance-lab src="{{base}}/assets/finance/portfolio.html?v=frontier-guide-2" title="Ten-industry mean–ES allocation and efficient frontier" style="width:100%;height:1510px;border:1px solid #d8e2e9;border-radius:6px;" loading="lazy"></iframe>
 <script src="{{base}}/assets/finance/embed.js" defer></script>
 
 [Open portfolio lab full-width]({{base}}/assets/finance/portfolio.html)
