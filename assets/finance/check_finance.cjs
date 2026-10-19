@@ -113,3 +113,18 @@ for(const [aKey,s] of Object.entries(hindsight.levels)){
  for(const p of s.oracle)verifyPoint(p,a);
 }
 console.log('Pass: matched ES/variance targets, independent return/ES calculations, and exact hindsight bounds.');
+
+// Unified Figure 4: calibration, matched-target allocation, and attribution.
+{
+ const U=require('./unified.js'),fs=require('fs');
+ const d=JSON.parse(fs.readFileSync(__dirname+'/hindsight-results.json'));
+ const rows=JSON.parse(fs.readFileSync(__dirname+'/returns.json')).rows.filter(r=>r[0]>='2010-01-01'&&r[0]<'2020-01-01').map(r=>r.slice(1));
+ for(const [a,S] of Object.entries(d.levels))for(const r of S.records){
+  const e=r.historical,m=r.markowitz,z=U.diagnostics(e,m,+a);
+  if(z.trainingBenefit < -1e-6 || z.hindsight < -1e-6)throw Error('Wrong gap direction');
+  for(const p of [e,m]){const c=U.contributions(rows,p.weights,+a);if(Math.abs(c.reduce((s,x)=>s+x,0)-p.es)>1e-7)throw Error('Contribution mismatch');}
+ }
+ const r=d.levels['0.975'].records[12],g=U.diagnostics(r.historical,r.markowitz,.975);
+ if(Math.abs(g.normalGap-.6245)>.001||Math.abs(g.calibration-1.3513)>.001)throw Error('Calibration regression');
+ console.log('Pass: unified Figure 4 risk gaps and all matched-target tail contributions.');
+}

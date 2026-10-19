@@ -86,211 +86,78 @@ Each component of $r_t\in\mathbb R^{10}$ is an industry's daily return. Each ind
 | Allocation | Ten weights, $w_j\ge0$, $\sum_jw_j=1$; maintain weights by daily rebalancing |
 | Relation to the paper | A new mean–ES exercise on its 10Ind universe; the published experiment used monthly data and different estimation procedures |
 
-### Decision: maximize mean return under an ES budget
+### One target, two allocation rules
 
-At confidence $\alpha$, expected shortfall averages the worst $1-\alpha$ fraction of losses. For continuous losses,
-
-$$
-\operatorname{ES}_\alpha(L)=E[L\mid L\ge q_\alpha(L)],\qquad
-\boxed{\max_{w\ge0,\,\mathbf1^\top w=1}\widehat\mu^\top w
-\quad\text{s.t.}\quad\widehat{\operatorname{ES}}_\alpha(-w^\top r)\le b.}
-$$
-
-Here $\widehat\mu$ is the vector of training means; $b$ is the allowed **average tail loss**, rather than a maximum daily loss. At 97.5%, ES averages the worst 2.5% of outcomes.
-
-The [Rockafellar–Uryasev (2000)](https://sites.math.washington.edu/~rtr/papers/rtr179-CVaR1.pdf) scenario formulation yields a linear program:
+Let $m(w)=\widehat\mu^\top w$, $\sigma(w)=\sqrt{w^\top\widehat\Sigma w}$ and $\mathcal W=\{w\ge0:\mathbf1^\top w=1\}$. All estimates below use **2010–2019**. Confidence $\alpha=97.5\%$ selects the portfolio's worst 2.5% of days.
 
 $$
-\widehat{\operatorname{ES}}_\alpha(w)
-=\min_\tau\left\{\tau+\frac{1}{n(1-\alpha)}
-\sum_t(-w^\top r_t-\tau)_+\right\}.
+\underbrace{H_\alpha(w)}_{\text{historical CVaR / ES}}
+=\min_\tau\left[\tau+\frac{1}{n(1-\alpha)}\sum_t(-w^\top r_t-\tau)_+\right],\qquad
+\underbrace{N_\alpha(w)}_{\text{normal ES}}=-m(w)+k_\alpha\sigma(w),\quad
+k_\alpha=\frac{\phi(\Phi^{-1}(\alpha))}{1-\alpha}.
 $$
 
-<details markdown="1">
-<summary>Explicit optimization variables and constraints</summary>
-
-Optimize $(w,\tau,s_1,\ldots,s_n)$ to maximize $\widehat\mu^\top w$, subject to
+The [Rockafellar–Uryasev formulation](https://sites.math.washington.edu/~rtr/papers/rtr179-CVaR1.pdf) minimizes the scenario tail average through a linear program. It computes empirical ES exactly, including a fractional boundary day; future risk still needs validation.
 
 $$
-\tau+\frac{\sum_ts_t}{n(1-\alpha)}\le b,\quad
-s_t\ge-w^\top r_t-\tau,\quad s_t\ge0,\quad
-w\ge0,\quad\mathbf1^\top w=1.
+\boxed{w_E(q)=\arg\min_{w\in\mathcal W,\,m(w)\ge q}H_\alpha(w)},\qquad
+\boxed{w_M(q)=\arg\min_{w\in\mathcal W,\,m(w)\ge q}\sigma^2(w)}.
 $$
 
-The auxiliary $s_t$ records loss exceeding threshold $\tau$. The empirical calculation includes a fractional boundary observation when $n(1-\alpha)$ is noninteger.
+**E** controls tail loss; **M** is [Markowitz minimum variance](https://doi.org/10.1111/j.1540-6261.1952.tb01525.x). The common return target $q$ makes their objectives comparable. At exactly fixed mean $m(w)=q$, minimizing normal ES also minimizes variance: the normal and Markowitz efficient families coincide. Markowitz optimization itself only requires finite covariance.
 
-</details>
+### Figure 4 · risk estimates, allocation quality and hindsight
 
-### What changes if returns are assumed normal?
+**Figure 3** displays the selected weights. **Figure 4A** compares training risk; **Figure 4B** evaluates the same weights on later data. Both belong to the same interactive Figure 4 and share the controls.
 
-$$
-\operatorname{ES}^{N}_\alpha(w)
-=-w^\top\widehat\mu+
-\sqrt{w^\top\widehat\Sigma w}\,
-\frac{\phi\{\Phi^{-1}(\alpha)\}}{1-\alpha}.
-$$
-
-Historical ES uses **observed joint loss scenarios**. Normal ES uses **means and covariances**. With the same mean objective and budget, a smaller modelled tail risk permits more exposure to high-mean assets. The two allocations can therefore differ even on the same training data.
-
-### Figure 4 notation · one return objective, two risk estimates
-
-For any weight vector $w$, define
-
-$$
-m(w)=\widehat\mu^\top w,\qquad
-H_\alpha(w)=\widehat{\operatorname{ES}}^{\mathrm{historical}}_\alpha(-w^\top r),\qquad
-N_\alpha(w)=\widehat{\operatorname{ES}}^{\mathrm{normal}}_\alpha(-w^\top r).
-$$
-
-Both allocations maximize the **same estimated mean** over $\mathcal W=\{w:w\ge0,\ \mathbf1^\top w=1\}$:
-
-$$
-w_H(b)\in\arg\max_{w\in\mathcal W}\{m(w):H_\alpha(w)\le b\},\qquad
-w_N(b)\in\arg\max_{w\in\mathcal W}\{m(w):N_\alpha(w)\le b\}.
-$$
-
-The selector chooses $w^*$ from $w_H(b)$, $w_N(b)$, or the equal-weight portfolio. Confidence $\alpha$ specifies the tail fraction $1-\alpha$; budget $b$ limits its average loss.
-
-### Interactive lab B · follow the selected point from A to B
-
-Start with **Optimize with normal ES**. Point A reports its normal-model risk; point B remeasures the **same weights** with historical losses. The arrow isolates the change in risk estimate. The table compares the normal-chosen and historical-chosen allocations at the same budget.
-
-<iframe id="portfolio-lab" data-finance-lab src="{{base}}/assets/finance/portfolio.html?v=frontier-guide-2" title="Ten-industry mean–ES allocation and efficient frontier" style="width:100%;height:1510px;border:1px solid #d8e2e9;border-radius:6px;" loading="lazy"></iframe>
+<iframe id="portfolio-lab" data-finance-lab src="{{base}}/assets/finance/portfolio.html?v=combined-4" title="Figure 4: normal, CVaR, Markowitz and hindsight" style="width:100%;height:1900px;border:1px solid #d8e2e9;border-radius:6px;" loading="lazy"></iframe>
 <script src="{{base}}/assets/finance/embed.js" defer></script>
 
-[Open portfolio lab full-width]({{base}}/assets/finance/portfolio.html)
+[Open Figure 4 full-width]({{base}}/assets/finance/portfolio.html?v=combined-4)
 
-### Read Figure 3 · capital weight differs from risk contribution
-
-For the selected portfolio's tail event $\mathcal T_w=\{L_p\ge q_\alpha(L_p)\}$,
+Use $H'_\alpha,m'$ for **2020–2025** empirical ES and mean. The green hindsight curve solves
 
 $$
-\underbrace{C_j(w)}_{\text{industry }j\text{'s tail contribution}}
-=w_jE[-r_j\mid\mathcal T_w],\qquad
-\sum_{j=1}^{10}C_j(w)=\operatorname{ES}_\alpha(L_p).
+w_O(u)=\arg\min_{w\in\mathcal W,\,m'(w)\ge u}H'_\alpha(w).
 $$
 
-The left bars show capital weights; the right bars show each industry's losses **on the portfolio's bad days**. Changing weights also changes which days enter the tail. This is how joint downside behaviour affects diversification: an asset that gains on those days can have a negative contribution.
+It uses the entire later period to choose weights. This provides an optimistic empirical benchmark; the population optimum remains unknown.
 
-### Read Figure 4 · curves, points and favorable directions
-
-The **blue curve is computed with the Rockafellar–Uryasev scenario linear program** above. Each curve traces allocations as the budget $b$ varies:
-
-| Visual | Coordinates $(\text{risk},\text{mean})$ | Interpretation |
+| Line | Figure 4A coordinates | Figure 4B coordinates |
 |---|---|---|
-| **Blue solid**, $\Gamma_H$ | $(H_\alpha(w_H(b)),m(w_H(b)))$ | Historical-ES efficient frontier |
-| **Gray dashed**, $\Gamma_N$ | $(N_\alpha(w_N(b)),m(w_N(b)))$ | Efficient frontier under the normal model |
-| **Orange dotted**, $\Gamma_{N\to H}$ | $(H_\alpha(w_N(b)),m(w_N(b)))$ | Normal-chosen allocations evaluated using historical ES |
-| **Hollow A** | $(N_\alpha(w^*),m(w^*))$ | Selected weights: normal risk estimate |
-| **Filled B** | $(H_\alpha(w^*),m(w^*))$ | Same selected weights: historical risk estimate |
-| **Vertical dotted line** | $x=b$ | Allowed ES budget |
-| **Diamond** | $(H_\alpha(w^{\mathrm{EW}}),m(w^{\mathrm{EW}}))$ | Equal-weight benchmark |
+| Gray dashed · normal estimate | $(N_\alpha(w_M),m(w_M))$ | — |
+| Orange dashed · Markowitz | $(H_\alpha(w_M),m(w_M))$ | $(H'_\alpha(w_M),m'(w_M))$ |
+| Blue · CVaR | $(H_\alpha(w_E),m(w_E))$ | $(H'_\alpha(w_E),m'(w_E))$ |
+| Green dotted · hindsight | — | $(H'_\alpha(w_O(u)),m'(w_O(u)))$ |
 
-**Favorable direction: upper left, using the same risk measure.** At equal mean, lower ES is preferable; at equal ES, higher mean is preferable. Higher mean with higher ES requires a risk–return trade-off.
-
-Compare **blue with orange** to evaluate allocation quality under historical ES. Gray lies on a different model's risk scale: its apparent advantage can disappear when those weights are re-evaluated. Orange is an allocation path; blue is the historical efficient boundary. In this sample, orange closely follows blue: the normal-chosen portfolios can remain near-efficient at their **higher historical risk**. The prominent problem is the understated budget needed to hold them. The plotted curves connect a finite grid of optimized solutions.
-
-### Read the table · three distinct meanings of “loss”
-
-**1. Risk underestimation, holding weights fixed:**
+**1. Does normal overlook tail risk?** Follow gray A → orange M: identical weights, different estimates.
 
 $$
-\Delta_{\mathrm{risk}}(w^*)=H_\alpha(w^*)-N_\alpha(w^*).
+\Delta_N=H_\alpha(w_M)-N_\alpha(w_M).
 $$
 
-A positive value moves A **rightward** to B. At the default settings, normal-chosen weights report $N_\alpha=2.34\%$ but have $H_\alpha=3.06\%$: the tail average is underestimated by approximately **0.72 percentage points**. Both use 2010–2019; no future data enter this comparison.
+A positive gap means normal **underestimates tail loss and overstates portfolio attractiveness**. Orange being close to blue concerns allocation efficiency; gray being far left concerns risk calibration. These are different effects.
 
-**2. Excess over the allowed budget:**
-
-$$
-\Delta_{\mathrm{budget}}(w^*)=H_\alpha(w^*)-b.
-$$
-
-Positive means B lies **right of the budget line**. A portfolio accepted by the normal model can therefore exceed the historical-ES limit. For the default normal-chosen portfolio, the excess is also about 0.72 pp because its normal constraint is binding.
-
-**3. Later-period comparison of two different allocations:** define $H^{\mathrm{test}}_\alpha$ using 2020–2025, with each portfolio's training weights fixed.
+**2. What does CVaR gain over variance control?** At the same training target,
 
 $$
-\Delta_{\mathrm{test}}
-=H^{\mathrm{test}}_\alpha(w_N(b))-H^{\mathrm{test}}_\alpha(w_H(b)).
+\Delta_{\mathrm{allocation}}=H_\alpha(w_M)-H_\alpha(w_E)\ge0.
 $$
 
-At the default settings, the normal-chosen portfolio has later ES **4.54%**, versus **3.68%** for the historical-chosen portfolio: approximately **0.86 pp more average tail loss**. Its later mean daily return is also higher, **0.086% versus 0.054%**. The table updates both sides of this trade-off.
+At the default target, training ES is **2.452% for CVaR versus 2.475% for Markowitz**. The gain is small. Later, Markowitz has lower ES (**3.605% versus 3.804%**) and lower mean (**0.0493% versus 0.0581% per day**). Tail optimization improves its training objective; future outcomes also depend on estimation and market changes.
 
-These ES differences describe tail averages. Each allocation's ES uses **its own worst $1-\alpha$ fraction of days**, which may be different dates. They are neither a daily loss charged to the portfolio nor a causal estimate of damage from the normal assumption; the later period also reflects changing market conditions.
-
-## 3. Markowitz and a hindsight benchmark
-
-### Why the normal and historical curves can be close
-
-At a fixed mean $m(w)=q$, the normal model gives
+**3. How close is the estimated tail risk to what occurred?** Keep E's weights fixed:
 
 $$
-N_\alpha(w)=-q+k_\alpha\sqrt{w^\top\widehat\Sigma w},\qquad
-k_\alpha=\frac{\phi(\Phi^{-1}(\alpha))}{1-\alpha}>0.
+\Delta_{\mathrm{calibration}}=H'_\alpha(w_E)-H_\alpha(w_E),\qquad
+\Delta_{\mathrm{hindsight}}=H'_\alpha(w_E)-H'_\alpha\!\left(w_O(m'(w_E))\right).
 $$
 
-Thus minimizing normal ES at that mean also minimizes variance. The normal-model frontier and the Markowitz family are closely related. Small gaps between the orange and blue curves are a valid empirical outcome: tail-sensitive optimization can change the reported risk substantially while changing efficient weights only modestly.
+Default: training ES **2.452% → later ES 3.804%**, a **1.351 pp** increase. Hindsight achieves **3.655%** at at least E's later mean, a separate **0.148 pp** allocation improvement. The first compares estimated and realised risk; the second compares weights with and without future information. Later empirical ES is a finite-sample outcome, and regime changes contribute to its difference from training ES.
 
-### Match the training-return target, then compare future outcomes
+**Reading direction:** left is lower tail loss; up is higher mean. Compare allocations within one panel using historical ES. Each portfolio's tail is its own worst $1-\alpha$ fraction of days. Curves connect fitted targets; later paths may lose their training efficiency.
 
-For a common training target $q$, compare the classical [Markowitz (1952)](https://doi.org/10.1111/j.1540-6261.1952.tb01525.x) rule with the ES rule:
-
-$$
-\begin{aligned}
-w_M(q)&\in\arg\min_{w\in\mathcal W}w^\top\widehat\Sigma_{\mathrm{train}}w
-&&\text{s.t. }m_{\mathrm{train}}(w)\ge q,\\
-w_E(q)&\in\arg\min_{w\in\mathcal W}H^{\mathrm{train}}_\alpha(w)
-&&\text{s.t. }m_{\mathrm{train}}(w)\ge q.
-\end{aligned}
-$$
-
-Both use 2010–2019. Markowitz controls the second moment; ES controls the empirical tail average. Markowitz optimization is defined for any finite-covariance distribution. The ES rule traces the same historical efficient family as Figure 4, parameterized here by a **return target** instead of a loss budget.
-
-For every $q$, Figure 5 places both allocations on **one evaluation scale**:
-
-$$
-\bigl(H^{\mathrm{test}}_\alpha(w),\ m_{\mathrm{test}}(w)\bigr),
-\qquad \text{test}=2020\text{–}2025.
-$$
-
-### See the entire evaluation period: the hindsight oracle
-
-After observing **all 2020–2025 returns**, solve
-
-$$
-w_O(u)\in\arg\min_{w\in\mathcal W}H^{\mathrm{test}}_\alpha(w)
-\quad\text{s.t.}\quad m_{\mathrm{test}}(w)\ge u.
-$$
-
-The green curve is this hindsight mean–ES frontier. “Best” means minimum realised ES for a required realised mean, within the same ten-asset, long-only universe. Every point uses one fixed target-weight vector with daily rebalancing. This is an **optimistic reference with look-ahead information**, rather than an estimate of the unknown population optimum.
-
-To compare a trained portfolio $w$ with hindsight, set $u=m_{\mathrm{test}}(w)$:
-
-$$
-\underbrace{H^{\mathrm{test}}_\alpha(w)
--H^{\mathrm{test}}_\alpha\!\left(w_O(m_{\mathrm{test}}(w))\right)}_{\text{ES reduction available with hindsight at at least the same realised mean}}
-\ge0.
-$$
-
-<iframe id="hindsight-lab" data-finance-lab src="{{base}}/assets/finance/hindsight.html?v=hindsight-1" title="Matched-target Markowitz, ES and hindsight comparison" style="width:100%;height:1700px;border:1px solid #d8e2e9;border-radius:6px;" loading="lazy"></iframe>
-
-[Open Markowitz and hindsight comparison full-width]({{base}}/assets/finance/hindsight.html?v=hindsight-1)
-
-**Read the comparison:** blue and purple use the same training target; their later means can differ. Green uses future information. Moving toward green measures hindsight opportunity, while comparing blue and purple reveals the realised risk–return trade-off. Toggle the period to inspect training performance; the evaluation paths can lose their training efficiency.
-
-At the default $q\approx0.05845\%$ per day and $\alpha=97.5\%$:
-
-| Quantity | ES-trained | Markowitz |
-|---|---:|---:|
-| Training ES | 2.452% | 2.475% |
-| Evaluation ES | 3.804% | 3.605% |
-| Evaluation mean / day | 0.0581% | 0.0493% |
-| Matched hindsight ES | 3.655% | 3.457% |
-
-ES wins on training ES, but Markowitz has lower later ES **and lower later mean** in this example. The hindsight gaps are about 0.15 pp for both selected portfolios. These modest gaps are reported as calculated; changing $q$ reveals the rest of the comparison. Historical tail optimization supplies an objective, while future performance also depends on estimation and changing market conditions.
-
-[Reproduction script]({{base}}/assets/finance/hindsight_study.py) · [Full results and weights]({{base}}/assets/finance/hindsight-results.json). Use the existing `returns.json` alongside the script; NumPy and SciPy are required.
+[Reproduction script]({{base}}/assets/finance/hindsight_study.py) · [Full weights and results]({{base}}/assets/finance/hindsight-results.json).
 
 <details markdown="1">
 <summary>Data, scope and reproducibility</summary>
@@ -299,6 +166,6 @@ ES wins on training ES, but Markowitz has lower later ES **and lower later mean*
 - **Units:** equations are scale-consistent; all panel returns, means and ES values are daily percentages. Contributions are percentage points of loss. Industry series are research portfolios.
 - **Estimation:** frontiers use 2010–2019 only; evaluation uses 2020–2025 with frozen target weights. Costs are excluded. Estimated means and tail expectations are uncertain, and future ES can exceed the training budget.
 - **Tail interpretation:** these are unconditional empirical diagnostics. Volatility clustering can generate fat pooled tails. Simple-return losses on an unlevered long position are bounded at 100%; a polynomial tail is an idealized model over the relevant range.
-- **Reproduce:** download [portfolio_study.py]({{base}}/assets/finance/portfolio_study.py) and [returns.json]({{base}}/assets/finance/returns.json) into one folder; install NumPy and SciPy, then run `python portfolio_study.py`. [Calculated weights and results]({{base}}/assets/finance/portfolio-results.json).
+- **Reproduce:** download [hindsight_study.py]({{base}}/assets/finance/hindsight_study.py) and [returns.json]({{base}}/assets/finance/returns.json) into one folder; install NumPy and SciPy, then run `python hindsight_study.py`. [Calculated weights and results]({{base}}/assets/finance/hindsight-results.json).
 
 </details>

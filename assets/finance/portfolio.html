@@ -1,41 +1,10 @@
-<!doctype html><html lang="en"><head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Ten-industry portfolio — allocation and expected shortfall</title>
-<link rel="stylesheet" href="lab.css?v=frontier-guide-2"><script defer src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
-<script defer src="portfolio-data.js"></script><script defer src="portfolio.js?v=frontier-guide-2"></script>
-</head><body>
-<h1>Allocate across ten U.S. industries</h1>
-<p>Training: <strong>2010–2019</strong>. Evaluation: <strong>2020–2025</strong>. Each industry is a value-weighted stock portfolio; the equal-weight benchmark invests 10% in each industry.</p>
-<div class="controls">
-<label>ES confidence α<select id="alpha"><option value="0.95">95% · worst 5%</option><option value="0.975" selected>97.5% · worst 2.5%</option><option value="0.99">99% · worst 1%</option></select></label>
-<label>Choose portfolio<select id="strategy"><option value="historical">Optimize with historical ES</option><option value="gaussian" selected>Optimize with normal ES</option><option value="equal">Equal weight · 10% each</option></select></label>
-<label><span id="budget-label">Training ES budget</span><input id="budget" type="range" min="0" max="50" value="22" step="1" aria-label="Training ES budget"></label>
-</div>
-<p id="error" role="alert"></p><div id="summary" class="readout" aria-live="polite">Loading allocations…</div>
-<section><h2>3. Capital weights and tail-loss contributions</h2>
-<div class="grid"><div id="weights" class="chart" role="img" aria-label="Capital weights across ten industries"></div><div id="contributions" class="chart" role="img" aria-label="Industry contributions to historical portfolio expected shortfall"></div></div>
-<p id="contribution-note" class="muted"></p></section>
-<section><h2>4. Read the frontier: reported risk → historical risk</h2>
-<p class="direction"><strong>↑ Higher estimated return · ← Lower tail loss.</strong><br>Compare blue with orange on the same historical-risk scale. Gray shows what the normal model predicts.</p>
-<p class="muted math">m(w) = μ̂ᵀw; H<sub>α</sub>(w) = training historical ES; N<sub>α</sub>(w) = training normal ES.<br>w<sub>H</sub>(b) and w<sub>N</sub>(b) maximize m(w) under H<sub>α</sub>(w) ≤ b and N<sub>α</sub>(w) ≤ b, respectively.</p>
-<div class="curve-key">
-<div><span class="swatch blue"></span><strong>Blue · historical frontier</strong><br><span class="math">Γ<sub>H</sub> = {(H<sub>α</sub>(w<sub>H</sub>(b)), m(w<sub>H</sub>(b)))}</span><br>Choose weights and measure risk using historical losses.</div>
-<div><span class="swatch gray"></span><strong>Gray dashed · normal frontier</strong><br><span class="math">Γ<sub>N</sub> = {(N<sub>α</sub>(w<sub>N</sub>(b)), m(w<sub>N</sub>(b)))}</span><br>Choose weights and report risk assuming normal returns.</div>
-<div><span class="swatch orange"></span><strong>Orange dotted · normal weights, historical risk</strong><br><span class="math">Γ<sub>N→H</sub> = {(H<sub>α</sub>(w<sub>N</sub>(b)), m(w<sub>N</sub>(b)))}</span><br>Keep the normal-chosen weights; remeasure their risk using historical losses. This is an allocation path, not an efficient frontier.</div>
-</div>
-<p id="selection-equation" class="math"></p>
-<div id="frontier" class="chart wide" role="img" aria-label="Historical frontier, normal frontier, and normal allocations re-evaluated with historical expected shortfall"></div>
-<p class="muted math">A ○ = (N<sub>α</sub>(w*), m(w*)) · B ● = (H<sub>α</sub>(w*), m(w*)) · ◆ = equal-weight portfolio measured with H<sub>α</sub>.<br>A → B keeps the same weights. The dotted vertical line x = b is the ES budget.</p>
-<p id="frontier-note" class="readout compact" aria-live="polite"></p>
-<p class="muted">Favorable comparison: on the historical-risk scale, move left for the same mean, or up for the same ES. Gray appearing farther left reflects a different risk estimate; compare blue and orange to assess allocations under one metric.</p></section>
-<h2>What does using the normal model cost in tail risk?</h2>
-<p>Compare two allocations chosen with the <strong>same α, budget b, training data and mean-return objective</strong>. All ES entries are average losses in the portfolio's worst 1 − α fraction of days.</p>
-<div class="table-wrap"><table><thead><tr><th>Quantity</th><th>Normal-chosen<br><span class="math">w<sub>N</sub>(b)</span></th><th>Historical-chosen<br><span class="math">w<sub>H</sub>(b)</span></th></tr></thead><tbody id="results"></tbody></table></div>
-<p id="comparison-note" class="readout compact" aria-live="polite"></p>
-<p class="muted"><strong>Three different comparisons:</strong> H − N is risk underestimation for identical weights; H − b is excess over the training budget; the later-sample ES difference compares two allocations. A percentage-point ES difference is a difference in tail averages, rather than an extra loss incurred every day.</p>
-<p class="muted">Weights are fitted on 2010–2019 and held at fixed targets by daily rebalancing in 2020–2025. Costs are excluded. Later-period outcomes also reflect market changes; the comparison does not isolate a causal effect of the normal assumption.</p>
-<details><summary>Construction and reproducibility</summary>
-<p class="muted">Published universe: 10Ind in DeMiguel, Garlappi, Nogales &amp; Uppal (2009), Table 1. This is a new daily-data mean–ES exercise using that universe. Its periods, objective and estimates differ from the paper's monthly experiment.</p>
-<p class="muted">Each budget selects a precomputed optimum among all ten long-only weights. Historical optimization: linear programming. Normal optimization: convex mean–ES constraint. Curves connect solutions at 51 budget levels; intermediate curve segments are visual guides. Infeasible budgets show no optimal allocation.</p>
-<p class="muted"><a href="portfolio_study.py" download>Calculation script</a> · <a href="portfolio-results.json" download>All weights and results</a> · <a href="returns.json" download>Input data</a></p></details>
-</body></html>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Portfolio risk: normal, CVaR, Markowitz and hindsight</title><link rel="stylesheet" href="lab.css"><script defer src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script><script defer src="data.js"></script><script defer src="hindsight-data.js"></script><script defer src="unified.js?v=combined-4"></script><style>.chart.wide{height:440px}.key{display:flex;flex-wrap:wrap;gap:14px;font-size:13px}.key b{border-bottom:3px solid;padding-bottom:3px}.readout{min-height:0} .plots{display:grid;grid-template-columns:1fr;gap:10px}</style></head><body>
+<h1>Ten industries · one common return target</h1><p>Fit weights on 2010–2019; evaluate on 2020–2025. Long-only, fully invested, daily rebalancing, before costs.</p>
+<div class="controls"><label>ES confidence α<select id="alpha"><option value="0.95">95%</option><option value="0.975" selected>97.5%</option><option value="0.99">99%</option></select></label><label><span id="target-label">Training return target q</span><input id="target" type="range" min="0" max="24" value="12"></label><label>Figure 3 allocation<select id="strategy"><option value="historical">E · CVaR</option><option value="markowitz">M · Markowitz</option></select></label></div><p id="error"></p>
+<h2>3. Capital weights and tail contributions</h2><div class="grid"><div id="weights" class="chart" aria-label="Ten industry allocation weights"></div><div id="contributions" class="chart" aria-label="Industry contributions to portfolio ES"></div></div><p class="muted">Left: invested capital. Right: each industry’s weighted loss on this portfolio’s worst training days; contributions sum to its ES.</p>
+<h2>4. Normal risk, CVaR, Markowitz and hindsight</h2><p><strong>← Lower ES · ↑ Higher mean return.</strong> The same α and target q control both panels. Each axis uses daily percentages.</p>
+<div class="key"><b style="color:#83939c">Gray dashed · normal estimate</b><b style="color:#b96937">Orange dashed · Markowitz</b><b style="color:#237c9c">Blue · CVaR (Rockafellar–Uryasev)</b><b style="color:#36816b">Green dotted · hindsight</b></div>
+<div class="plots"><section><h2>4A. Training · does normal understate risk?</h2><p class="muted">Gray: (N(M), m(M)); orange: (H(M), m(M)); blue: (H(E), m(E)). A → M keeps the weights fixed and changes the risk estimate. E and M share target q.</p><div id="frontier" class="chart wide"></div></section><section><h2>4B. Later period · what happened to those weights?</h2><p class="muted">Orange and blue: (H′(w), m′(w)). Green: (H′(O(u)), m′(O(u))). Open green points match at least the realised mean of E or M. The displayed range focuses on trained portfolios.</p><div id="evaluation" class="chart wide"></div></section></div>
+<p id="normal-note" class="readout"></p><p id="benefit-note" class="readout"></p><p id="calibration-note" class="readout"></p>
+<div class="table-wrap"><table><thead><tr><th>Same weights across periods</th><th>E · CVaR</th><th>M · Markowitz</th></tr></thead><tbody id="results"></tbody></table></div>
+<p class="muted">H = training empirical ES; N = training normal ES; H′ = later empirical ES. Hindsight uses all later returns to choose weights. It is an empirical look-ahead benchmark; population tail risk remains unknown. Each portfolio selects its own worst 1 − α fraction of days.</p><details><summary>Methods and downloads</summary><p>For each training target q, E minimizes historical CVaR; M minimizes variance. At an exactly fixed mean, minimizing normal ES also minimizes variance. Markowitz itself requires finite covariance, rather than normality. Curves join 25 fitted targets; green uses additional later-period targets and exact matched-mean solutions.</p><p><a href="hindsight_study.py">Reproduction script</a> · <a href="hindsight-results.json">Weights and results</a> · <a href="returns.json">Returns</a></p></details></body></html>
