@@ -1,0 +1,26 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Markowitz, ES and hindsight comparison</title><link rel="stylesheet" href="lab.css?v=hindsight-1"><script defer src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script><script defer src="hindsight-data.js?v=hindsight-1"></script><script defer src="hindsight.js?v=hindsight-1"></script></head><body>
+<h1>5. Variance control, ES control, and hindsight</h1>
+<p>Same ten industries and long-only weights. Fit blue and purple on <strong>2010–2019</strong>; evaluate them on <strong>2020–2025</strong>. Green chooses weights after seeing all of 2020–2025.</p>
+<div class="controls">
+<label>ES confidence α<select id="alpha"><option value="0.95">95%</option><option value="0.975" selected>97.5%</option><option value="0.99">99%</option></select></label>
+<label>Period used for plotted outcomes<select id="view"><option value="test">2020–2025 · evaluation</option><option value="train">2010–2019 · training diagnostic</option></select></label>
+<label><span id="target-label">Training mean-return target q</span><input type="range" id="target" min="0" max="24" step="1" value="12" aria-label="Training mean-return target"></label>
+<label>Plot range<select id="range"><option value="compare">Trained-portfolio range · zoom</option><option value="full">Full hindsight frontier</option></select></label>
+</div>
+<p class="muted">This panel varies a common mean-return target q. The ES-budget slider in Figure 4 is a separate comparison.</p>
+<div class="curve-key">
+<div><span class="swatch blue"></span><strong>Blue · trained ES allocations</strong><br><span class="math">w<sub>E</sub>(q) = arg min H<sup>train</sup><sub>α</sub>(w), subject to m<sup>train</sup>(w) ≥ q.</span></div>
+<div><span class="swatch" style="border-color:#8064a2;border-top-style:dashed"></span><strong>Purple dashed · trained Markowitz allocations</strong><br><span class="math">w<sub>M</sub>(q) = arg min wᵀΣ̂<sub>train</sub>w, subject to m<sup>train</sup>(w) ≥ q.</span></div>
+<div><span class="swatch" style="border-color:#36816b;border-top-style:dotted"></span><strong>Green dotted · hindsight ES frontier</strong><br><span class="math">w<sub>O</sub>(u) = arg min H<sup>test</sup><sub>α</sub>(w), subject to m<sup>test</sup>(w) ≥ u.</span><br>Fits and evaluates on the entire 2020–2025 period; an optimistic reference with look-ahead information.</div>
+</div>
+<p class="direction"><strong>All curves use the same plotted mean and historical ES.</strong> Upper-left is favorable. Each point is a fixed target-weight portfolio, maintained by daily rebalancing. ◆ is equal weight.</p>
+<p id="error" role="alert"></p><div id="performance" class="chart wide" role="img" aria-label="ES and Markowitz allocations measured on a common period against a hindsight ES frontier"></div>
+<p id="reading" class="readout compact" aria-live="polite"></p>
+<p class="muted">Blue and purple evaluation paths can bend backwards: training-efficient weights need not stay efficient later. Curves connect computed allocations; they do not represent wealth over time. Hindsight uses one constant target-weight vector per point, with no costs.</p>
+<h2>Selected target: matched objectives, measured outcomes</h2>
+<div class="table-wrap"><table><thead><tr><th>Quantity</th><th>ES-trained w<sub>E</sub></th><th>Markowitz w<sub>M</sub></th></tr></thead><tbody id="comparison"></tbody></table></div>
+<p id="oracle-note" class="muted"></p>
+<details><summary>Inspect the selected weights, including hindsight</summary><div class="table-wrap"><table><thead><tr><th>Industry</th><th>ES</th><th>Markowitz</th><th>Oracle at ES mean</th><th>Oracle at Markowitz mean</th></tr></thead><tbody id="weights-table"></tbody></table></div></details>
+<p class="muted">The hindsight gap is the potential ES reduction at at least the same realised mean, within this fixed-weight universe. It includes the advantage of knowing future returns and does not establish a deployable strategy. Markowitz uses the first two moments; its optimization is defined for any finite-covariance distribution.</p>
+<p class="muted"><a href="hindsight_study.py" download>Reproduce (NumPy + SciPy)</a> · <a href="hindsight-results.json" download>All weights and results</a> · <a href="returns.json" download>Input returns</a></p>
+</body></html>

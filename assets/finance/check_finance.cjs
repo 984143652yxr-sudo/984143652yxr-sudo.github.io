@@ -85,3 +85,31 @@ assert(Math.abs(normalChoice.test_es-historicalChoice.test_es-.86)<.01);
 assert(gaps(historicalChoice,base.budgets[22]).budgetExcess<1e-6);
 assert.deepEqual(gaps({es:2,normal_es:3},2.5),{underestimate:-1,budgetExcess:-.5});
 console.log('Pass: directional risk gaps, budget excess, later comparison, and negative-gap interpretation.');
+const hindsight=read('hindsight-results.json');
+const verifyPoint=(p,a)=>{
+ const tr=train10.map(r=>p.weights.reduce((s,w,j)=>s+w*r[j+1],0));
+ const te=test10.map(r=>p.weights.reduce((s,w,j)=>s+w*r[j+1],0));
+ assert(Math.abs(p.weights.reduce((s,w)=>s+w,0)-1)<1e-7);
+ assert(p.weights.every(w=>w>=-1e-7));
+ for(const [rs,prefix] of [[tr,''],[te,'test_']]){
+  assert(Math.abs(F.mean(rs)-p[prefix+'mean'])<1e-9);
+  assert(Math.abs(F.sd(rs)-p[prefix+'sd'])<1e-9);
+  assert(Math.abs(F.es(rs,a)-p[prefix+'es'])<1e-8);
+ }
+};
+for(const [aKey,s] of Object.entries(hindsight.levels)){
+ const a=+aKey;
+ for(const r of s.records){
+  for(const k of ['historical','markowitz']){
+   const p=r[k];verifyPoint(p,a);verifyPoint(p.oracle,a);
+   assert(p.mean>=r.target-1e-7);
+   assert(p.oracle.test_mean>=p.test_mean-1e-7);
+   assert(p.oracle.test_es<=p.test_es+1e-6);
+   assert(Math.abs(p.hindsight_gap-(p.test_es-p.oracle.test_es))<1e-9);
+  }
+  assert(r.historical.es<=r.markowitz.es+1e-6);
+  assert(r.markowitz.sd<=r.historical.sd+1e-6);
+ }
+ for(const p of s.oracle)verifyPoint(p,a);
+}
+console.log('Pass: matched ES/variance targets, independent return/ES calculations, and exact hindsight bounds.');

@@ -174,7 +174,7 @@ The left bars show capital weights; the right bars show each industry's losses *
 
 ### Read Figure 4 · curves, points and favorable directions
 
-Each curve traces allocations as the budget $b$ varies:
+The **blue curve is computed with the Rockafellar–Uryasev scenario linear program** above. Each curve traces allocations as the budget $b$ varies:
 
 | Visual | Coordinates $(\text{risk},\text{mean})$ | Interpretation |
 |---|---|---|
@@ -218,6 +218,79 @@ $$
 At the default settings, the normal-chosen portfolio has later ES **4.54%**, versus **3.68%** for the historical-chosen portfolio: approximately **0.86 pp more average tail loss**. Its later mean daily return is also higher, **0.086% versus 0.054%**. The table updates both sides of this trade-off.
 
 These ES differences describe tail averages. Each allocation's ES uses **its own worst $1-\alpha$ fraction of days**, which may be different dates. They are neither a daily loss charged to the portfolio nor a causal estimate of damage from the normal assumption; the later period also reflects changing market conditions.
+
+## 3. Markowitz and a hindsight benchmark
+
+### Why the normal and historical curves can be close
+
+At a fixed mean $m(w)=q$, the normal model gives
+
+$$
+N_\alpha(w)=-q+k_\alpha\sqrt{w^\top\widehat\Sigma w},\qquad
+k_\alpha=\frac{\phi(\Phi^{-1}(\alpha))}{1-\alpha}>0.
+$$
+
+Thus minimizing normal ES at that mean also minimizes variance. The normal-model frontier and the Markowitz family are closely related. Small gaps between the orange and blue curves are a valid empirical outcome: tail-sensitive optimization can change the reported risk substantially while changing efficient weights only modestly.
+
+### Match the training-return target, then compare future outcomes
+
+For a common training target $q$, compare the classical [Markowitz (1952)](https://doi.org/10.1111/j.1540-6261.1952.tb01525.x) rule with the ES rule:
+
+$$
+\begin{aligned}
+w_M(q)&\in\arg\min_{w\in\mathcal W}w^\top\widehat\Sigma_{\mathrm{train}}w
+&&\text{s.t. }m_{\mathrm{train}}(w)\ge q,\\
+w_E(q)&\in\arg\min_{w\in\mathcal W}H^{\mathrm{train}}_\alpha(w)
+&&\text{s.t. }m_{\mathrm{train}}(w)\ge q.
+\end{aligned}
+$$
+
+Both use 2010–2019. Markowitz controls the second moment; ES controls the empirical tail average. Markowitz optimization is defined for any finite-covariance distribution. The ES rule traces the same historical efficient family as Figure 4, parameterized here by a **return target** instead of a loss budget.
+
+For every $q$, Figure 5 places both allocations on **one evaluation scale**:
+
+$$
+\bigl(H^{\mathrm{test}}_\alpha(w),\ m_{\mathrm{test}}(w)\bigr),
+\qquad \text{test}=2020\text{–}2025.
+$$
+
+### See the entire evaluation period: the hindsight oracle
+
+After observing **all 2020–2025 returns**, solve
+
+$$
+w_O(u)\in\arg\min_{w\in\mathcal W}H^{\mathrm{test}}_\alpha(w)
+\quad\text{s.t.}\quad m_{\mathrm{test}}(w)\ge u.
+$$
+
+The green curve is this hindsight mean–ES frontier. “Best” means minimum realised ES for a required realised mean, within the same ten-asset, long-only universe. Every point uses one fixed target-weight vector with daily rebalancing. This is an **optimistic reference with look-ahead information**, rather than an estimate of the unknown population optimum.
+
+To compare a trained portfolio $w$ with hindsight, set $u=m_{\mathrm{test}}(w)$:
+
+$$
+\underbrace{H^{\mathrm{test}}_\alpha(w)
+-H^{\mathrm{test}}_\alpha\!\left(w_O(m_{\mathrm{test}}(w))\right)}_{\text{ES reduction available with hindsight at at least the same realised mean}}
+\ge0.
+$$
+
+<iframe id="hindsight-lab" data-finance-lab src="{{base}}/assets/finance/hindsight.html?v=hindsight-1" title="Matched-target Markowitz, ES and hindsight comparison" style="width:100%;height:1700px;border:1px solid #d8e2e9;border-radius:6px;" loading="lazy"></iframe>
+
+[Open Markowitz and hindsight comparison full-width]({{base}}/assets/finance/hindsight.html?v=hindsight-1)
+
+**Read the comparison:** blue and purple use the same training target; their later means can differ. Green uses future information. Moving toward green measures hindsight opportunity, while comparing blue and purple reveals the realised risk–return trade-off. Toggle the period to inspect training performance; the evaluation paths can lose their training efficiency.
+
+At the default $q\approx0.05845\%$ per day and $\alpha=97.5\%$:
+
+| Quantity | ES-trained | Markowitz |
+|---|---:|---:|
+| Training ES | 2.452% | 2.475% |
+| Evaluation ES | 3.804% | 3.605% |
+| Evaluation mean / day | 0.0581% | 0.0493% |
+| Matched hindsight ES | 3.655% | 3.457% |
+
+ES wins on training ES, but Markowitz has lower later ES **and lower later mean** in this example. The hindsight gaps are about 0.15 pp for both selected portfolios. These modest gaps are reported as calculated; changing $q$ reveals the rest of the comparison. Historical tail optimization supplies an objective, while future performance also depends on estimation and changing market conditions.
+
+[Reproduction script]({{base}}/assets/finance/hindsight_study.py) · [Full results and weights]({{base}}/assets/finance/hindsight-results.json). Use the existing `returns.json` alongside the script; NumPy and SciPy are required.
 
 <details markdown="1">
 <summary>Data, scope and reproducibility</summary>
