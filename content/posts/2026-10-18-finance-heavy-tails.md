@@ -6,7 +6,7 @@
   "date_label": "October 18, 2026",
   "status": "Interactive finance study",
   "reading_time": "7 min + exploration",
-  "summary": "Two separate laboratories: diagnose extreme returns, then allocate across a published ten-industry universe using an expected-shortfall frontier."
+  "summary": "Diagnose heavy tails, then compare rolling ES and volatility budgets through next-month returns, cumulative wealth and drawdown."
 }
 ---
 
@@ -82,90 +82,93 @@ Each component of $r_t\in\mathbb R^{10}$ is an industry's daily return. Each ind
 | Component | Specification |
 |---|---|
 | Published universe | Consumer non-durables, durables, manufacturing, energy, technology, telecom, shops, healthcare, utilities, other |
-| Data in this exercise | French value-weighted daily industry returns; estimate on 2010–2019, evaluate on 2020–2025 |
-| Allocation | Ten weights, $w_j\ge0$, $\sum_jw_j=1$; maintain weights by daily rebalancing |
-| Relation to the paper | A new mean–ES exercise on its 10Ind universe; the published experiment used monthly data and different estimation procedures |
+| Data in this exercise | French value-weighted daily industry returns; estimate on rolling 36-month windows, evaluate on 2020–2025 |
+| Allocation | Ten industry weights plus cash, $w_j\ge0$, $\sum_jw_j=1$; rebalance monthly |
+| Relation to the paper | A new rolling risk-budget exercise on its 10Ind universe; the published experiment used monthly data and different estimation procedures |
 
-### One target, two allocation rules
+### Rolling decision: maximize return under a risk budget
 
-Let $m(w)=\widehat\mu^\top w$, $\sigma(w)=\sqrt{w^\top\widehat\Sigma w}$ and $\mathcal W=\{w\ge0:\mathbf1^\top w=1\}$. All estimates below use **2010–2019**. Confidence $\alpha=97.5\%$ selects the portfolio's worst 2.5% of days.
+At each month-end $t$, estimate from the **previous 36 calendar months** $\mathcal D_t$. Choose weights, hold through the next month, then repeat. The evaluation period contains **72 months, January 2020–December 2025**.
 
 $$
-\underbrace{H_\alpha(w)}_{\text{historical CVaR / ES}}
-=\min_\tau\left[\tau+\frac{1}{n(1-\alpha)}\sum_t(-w^\top r_t-\tau)_+\right],\qquad
-\underbrace{N_\alpha(w)}_{\text{normal ES}}=-m(w)+k_\alpha\sigma(w),\quad
+\mathcal D_t\ \longrightarrow\ (\widehat\mu_t,\widehat\Sigma_t)
+\ \longrightarrow\ w_t\ \longrightarrow\ R_{t+1}^{\mathrm{out}}.
+$$
+
+The investment universe includes ten industries and **zero-return cash**, allowing low risk budgets to remain feasible. All strategies are long-only and unlevered, with $w\ge0$, $\mathbf1^\top w=1$. Set $\alpha=97.5\%$ and define daily risk in percentage units:
+
+$$
+m_t(w)=\widehat\mu_t^\top w,\qquad
+\sigma_t(w)=\sqrt{w^\top\widehat\Sigma_t w},\qquad
+N_t(w)=-m_t(w)+k_\alpha\sigma_t(w),\quad
 k_\alpha=\frac{\phi(\Phi^{-1}(\alpha))}{1-\alpha}.
 $$
 
-The [Rockafellar–Uryasev formulation](https://sites.math.washington.edu/~rtr/papers/rtr179-CVaR1.pdf) minimizes the scenario tail average through a linear program. It computes empirical ES exactly, including a fractional boundary day; future risk still needs validation.
+Historical ES uses the [Rockafellar–Uryasev scenario formulation](https://sites.math.washington.edu/~rtr/papers/rtr179-CVaR1.pdf):
 
 $$
-\boxed{w_E(q)=\arg\min_{w\in\mathcal W,\,m(w)\ge q}H_\alpha(w)},\qquad
-\boxed{w_M(q)=\arg\min_{w\in\mathcal W,\,m(w)\ge q}\sigma^2(w)}.
+H_t(w)=\min_\tau\left[\tau+
+\frac{1}{n_t(1-\alpha)}\sum_{s\in\mathcal D_t}(-w^\top r_s-\tau)_+\right].
 $$
 
-**E** controls tail loss; **M** is [Markowitz minimum variance](https://doi.org/10.1111/j.1540-6261.1952.tb01525.x). The common return target $q$ makes their objectives comparable. At exactly fixed mean $m(w)=q$, minimizing normal ES also minimizes variance: the normal and Markowitz efficient families coincide. Markowitz optimization itself only requires finite covariance.
+| Strategy | Monthly decision | Information |
+|---|---|---|
+| **H · historical ES** | $w_t^H(b)=\arg\max_w m_t(w)$ subject to $H_t(w)\le b$ | Previous 36 months |
+| **N · normal ES** | $w_t^N(b)=\arg\max_w m_t(w)$ subject to $N_t(w)\le b$ | Previous 36 months |
+| **M · Markowitz** | $w_t^M(v)=\arg\max_w m_t(w)$ subject to $\sigma_t(w)\le v$ | Previous 36 months |
+| **O · hindsight** | Maximize next-month terminal wealth subject to that month's realised ES $\le b$ | Entire next month, known in advance |
 
-### Figure 4 · risk estimates, allocation quality and hindsight
+H and N share ES budget $b$. M uses a separate daily volatility budget $v$. Its initial setting $v=b/k_\alpha$ is a zero-mean normal scale conversion; equal numerical scale does not ensure equal realised tail risk. [Markowitz (1952)](https://doi.org/10.1111/j.1540-6261.1952.tb01525.x)
 
-**Figure 3** displays the selected weights. **Figure 4A** compares training risk; **Figure 4B** evaluates the same weights on later data. Both belong to the same interactive Figure 4 and share the controls.
+### Figure 4 · estimated risk becomes realised performance
 
-<iframe id="portfolio-lab" data-finance-lab src="{{base}}/assets/finance/portfolio.html?v=combined-4" title="Figure 4: normal, CVaR, Markowitz and hindsight" style="width:100%;height:1900px;border:1px solid #d8e2e9;border-radius:6px;" loading="lazy"></iframe>
+**4A:** average the 72 rolling-window forecasts. Gray → orange keeps the normal-chosen weights and replaces their risk estimate. **4B:** apply those exact monthly weights to the subsequent month's actual returns, then pool all evaluation days. Move the ES budget to select corresponding blue and orange points in both panels; the Markowitz volatility slider is independent. Formulas for every line appear directly above its plot.
+
+<iframe id="portfolio-lab" data-finance-lab src="{{base}}/assets/finance/portfolio.html?v=rolling36-1" title="Rolling Figure 4: estimated risk, realised returns, wealth and drawdown" style="width:100%;height:4400px;border:1px solid #d8e2e9;border-radius:6px;" loading="lazy"></iframe>
 <script src="{{base}}/assets/finance/embed.js" defer></script>
 
-[Open Figure 4 full-width]({{base}}/assets/finance/portfolio.html?v=combined-4)
+[Open Figure 4 full-width]({{base}}/assets/finance/portfolio.html?v=rolling36-1)
 
-Use $H'_\alpha,m'$ for **2020–2025** empirical ES and mean. The green hindsight curve solves
+### Monthly holdings and the future-informed optimum
 
-$$
-w_O(u)=\arg\min_{w\in\mathcal W,\,m'(w)\ge u}H'_\alpha(w).
-$$
-
-It uses the entire later period to choose weights. This provides an optimistic empirical benchmark; the population optimum remains unknown.
-
-| Line | Figure 4A coordinates | Figure 4B coordinates |
-|---|---|---|
-| Gray dashed · normal estimate | $(N_\alpha(w_M),m(w_M))$ | — |
-| Orange dashed · Markowitz | $(H_\alpha(w_M),m(w_M))$ | $(H'_\alpha(w_M),m'(w_M))$ |
-| Blue · CVaR | $(H_\alpha(w_E),m(w_E))$ | $(H'_\alpha(w_E),m'(w_E))$ |
-| Green dotted · hindsight | — | $(H'_\alpha(w_O(u)),m'(w_O(u)))$ |
-
-**1. Does normal overlook tail risk?** Follow gray A → orange M: identical weights, different estimates.
+Let $G_{t,d,j}$ be asset $j$'s cumulative gross return from the start of holding month $t+1$ to day $d$, with $G_{t,0,j}=1$. Opening weights $w_t$ remain invested; daily weights drift naturally. The actual daily portfolio return, in percent, is
 
 $$
-\Delta_N=H_\alpha(w_M)-N_\alpha(w_M).
+R_{t,d}(w_t)=100\left(\frac{G_{t,d}^\top w_t}{G_{t,d-1}^\top w_t}-1\right).
 $$
 
-A positive gap means normal **underestimates tail loss and overstates portfolio attractiveness**. Orange being close to blue concerns allocation efficiency; gray being far left concerns risk calibration. These are different effects.
-
-**2. What does CVaR gain over variance control?** At the same training target,
+The green benchmark observes the whole next month and solves
 
 $$
-\Delta_{\mathrm{allocation}}=H_\alpha(w_M)-H_\alpha(w_E)\ge0.
+w_t^O(b)=\arg\max_{w\ge0,\,\mathbf1^\top w=1}G_{t,\mathrm{end}}^\top w
+\quad\text{s.t.}\quad
+\widehat{ES}_{\alpha,t+1}\{-R_{t,d}(w)\}\le b.
 $$
 
-At the default target, training ES is **2.452% for CVaR versus 2.475% for Markowitz**. The gain is small. Later, Markowitz has lower ES (**3.605% versus 3.804%**) and lower mean (**0.0493% versus 0.0581% per day**). Tail optimization improves its training objective; future outcomes also depend on estimation and market changes.
-
-**3. How close is the estimated tail risk to what occurred?** Keep E's weights fixed:
+Each month has fewer than 40 trading days, so at $\alpha=97.5\%$ its empirical ES equals its largest daily loss. The constraint therefore becomes linear:
 
 $$
-\Delta_{\mathrm{calibration}}=H'_\alpha(w_E)-H_\alpha(w_E),\qquad
-\Delta_{\mathrm{hindsight}}=H'_\alpha(w_E)-H'_\alpha\!\left(w_O(m'(w_E))\right).
+\left[G_{t,d}-(1-b/100)G_{t,d-1}\right]^\top w\ge0
+\quad\text{for every day }d.
 $$
 
-Default: training ES **2.452% → later ES 3.804%**, a **1.351 pp** increase. Hindsight achieves **3.655%** at at least E's later mean, a separate **0.148 pp** allocation improvement. The first compares estimated and realised risk; the second compares weights with and without future information. Later empirical ES is a finite-sample outcome, and regime changes contribute to its difference from training ES.
+This yields an **exact monthly terminal-wealth optimum under monthly ES control**. Green uses future information and a terminal-wealth objective; it is a perfect-information reference. It does not estimate an achievable population optimum. The other three strategies use past observations only.
 
-**Reading direction:** left is lower tail loss; up is higher mean. Compare allocations within one panel using historical ES. Each portfolio's tail is its own worst $1-\alpha$ fraction of days. Curves connect fitted targets; later paths may lose their training efficiency.
+### Read three outcomes separately
 
-[Reproduction script]({{base}}/assets/finance/hindsight_study.py) · [Full weights and results]({{base}}/assets/finance/hindsight-results.json).
+1. **Risk calibration:** in 4A, compare normal and historical risk estimates for identical N weights. In 4B, inspect the later realised ES. Averaging window estimates and measuring ES over the entire backtest are different operations.
+2. **Allocation performance:** compare H, N and M using both realised ES and realised mean. Lower estimated risk can permit larger positions; the actual tail loss depends on subsequent returns. The realised curves can bend and need not be efficient frontiers.
+3. **Investment path:** cumulative wealth compounds the actual daily returns. Maximum drawdown measures the largest peak-to-trough loss, while ES averages the worst 2.5% of daily losses. These measure different aspects of risk.
 
 <details markdown="1">
-<summary>Data, scope and reproducibility</summary>
+<summary>Data, assumptions and reproducibility</summary>
 
-- **Source:** [French Data Library](https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/Data_Library/det_10_ind_port.html), 6,539 daily observations in 2000–2025. Downloaded October 18, 2026; August 2026 CRSP vintage. Copyright Eugene F. Fama and Kenneth R. French.
-- **Units:** equations are scale-consistent; all panel returns, means and ES values are daily percentages. Contributions are percentage points of loss. Industry series are research portfolios.
-- **Estimation:** frontiers use 2010–2019 only; evaluation uses 2020–2025 with frozen target weights. Costs are excluded. Estimated means and tail expectations are uncertain, and future ES can exceed the training budget.
-- **Tail interpretation:** these are unconditional empirical diagnostics. Volatility clustering can generate fat pooled tails. Simple-return losses on an unlevered long position are bounded at 100%; a polynomial tail is an idealized model over the relevant range.
-- **Reproduce:** download [hindsight_study.py]({{base}}/assets/finance/hindsight_study.py) and [returns.json]({{base}}/assets/finance/returns.json) into one folder; install NumPy and SciPy, then run `python hindsight_study.py`. [Calculated weights and results]({{base}}/assets/finance/hindsight-results.json).
+- **Source:** [French Data Library](https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/Data_Library/det_10_ind_port.html), value-weighted daily ten-industry returns. Downloaded October 18, 2026; August 2026 CRSP vintage. Copyright Eugene F. Fama and Kenneth R. French.
+- **Timing:** January 2020 uses January 2017–December 2019 for estimation. Each subsequent window moves forward one month. Month-boundary trades are assumed frictionless; positions are held until the next rebalance.
+- **Risk model:** training scenarios use linear one-day portfolio returns $w^\top r_s$. The evaluation implements monthly holdings with within-month drift. Historical ES and normal ES limits are fitted constraints; future realised losses can exceed them.
+- **Cash and costs:** cash earns zero; no leverage, transaction costs, taxes or execution slippage. The industry series are research portfolios. The curves summarize 17 risk-budget settings.
+- **Hindsight:** the green rule sees next-month prices and optimizes every month under its own realised ES constraint. At this confidence level, its daily losses are bounded by $b$. Its result is an optimistic reference with explicit future information.
+- **Diagnostics:** the first laboratory describes unconditional sample tails; volatility clustering can contribute to heavy-looking pooled tails. An unlevered long position's simple loss is bounded at 100%.
+- **Reproduce:** download [rolling_study.py]({{base}}/assets/finance/rolling_study.py) and [returns.json]({{base}}/assets/finance/returns.json), install NumPy and SciPy, then run `python rolling_study.py`. [Complete monthly weights, forecasts and paths]({{base}}/assets/finance/rolling-results.json).
 
 </details>
