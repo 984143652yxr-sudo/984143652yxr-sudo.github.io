@@ -126,8 +126,6 @@ These are column and row descriptions of the **same prior**. The variance $v_c$ 
 
 ### Integrate the effects: the covariance that is fitted
 
-
-
 For a complete donor-by-type expression matrix, let $X$ be the $N\times L$ genotype matrix and $K=XX^\top/L$ its donor-relatedness matrix. Define
 
 $$
@@ -137,14 +135,7 @@ D=\operatorname{diag}\{\delta_{ic}\}.
 $$
 
 With expression stacked **by cell type**, the covariance is
-$$
-\mathbf{Y}_g=\left(\begin{array}{cccc}
-Y_{1,1} & Y_{1,2} & \cdots & Y_{1, C} \\
-Y_{2,1} & Y_{2,2} & \cdots & Y_{2, C} \\
-\vdots & \vdots & & \vdots \\
-Y_{N, 1} & Y_{N, 2} & \cdots & Y_{N, C}
-\end{array}\right),
-$$
+
 $$
 \boxed{
 \Sigma_{\rm CIGMA}
