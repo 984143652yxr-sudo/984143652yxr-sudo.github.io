@@ -43,6 +43,26 @@ The notation identifies the biological quantities. Each method below specifies i
 
 ## 2. CIGMA: partition genetic and residual variation
 
+### The data matrix: one gene, donor rows, cell-type columns
+
+For a fixed gene $g$, collect its pseudobulk expression into
+
+$$
+\boxed{
+Y_g=\begin{pmatrix}
+y_{11}&y_{12}&\cdots&y_{1C}\\
+y_{21}&y_{22}&\cdots&y_{2C}\\
+\vdots&\vdots&\ddots&\vdots\\
+y_{N1}&y_{N2}&\cdots&y_{NC}
+\end{pmatrix}\in\mathbb R^{N\times C}.}
+$$
+
+**A row follows one donor across cell types. A column follows one cell type across donors.** Entry $y_{ic}$ is this gene's expression mean over the cells assigned to donor $i$, type $c$, on the analysis scale. CIGMA fits these columns jointly, then repeats the analysis for another gene.
+
+The paper's OneK1K analysis retained **928 donors and seven cell types** after QC: $Y_g$ has shape $928\times7$. Its accompanying $N\times C$ matrix contains the estimated sampling variances $\widehat\delta_{ic}$ for those expression means. [CIGMA cohort and model](https://www.nature.com/articles/s41586-026-10577-6)
+
+The complete-matrix notation below assumes all donor–type combinations are included. With missing observations, the corresponding rows and columns of the stacked covariance must be selected consistently.
+
 ### Observation model
 
 For one genotype component containing $L$ SNPs, the shared-plus-specific model can be written
@@ -54,7 +74,7 @@ y_{ic}=m_{ic}
 +u_i+r_{ic}+\epsilon_{ic}.}
 $$
 
-Here $m_{ic}$ contains the cell-type mean and fitted covariate effects. The random terms have different roles:
+Here $m_{ic}$ contains the cell-type mean and covariate effects. The paper's compact residual $e_{ic}$ is expanded here as $u_i+r_{ic}$; $\eta_{jc}$ denotes its cell-type-specific SNP effect $\gamma_{jc}$. The random terms have different roles:
 
 | Term | Role | Variance |
 |---|---|---|
@@ -137,13 +157,81 @@ $D$ uses the same stacking order. Genetic covariance follows donor relatedness $
 
 For multiple genotype components, such as cis and trans, the genetic term becomes $\sum_h\Omega_{g,h}\otimes K_h$, with $K_h=X_hX_h^\top/L_h$. Each component has its own SNP set and variance parameters.
 
+### Read the covariance as cell-type blocks
+
+Stack the columns of $Y_g$ into $\mathbf y=(y_{11},\ldots,y_{N1},y_{12},\ldots,y_{NC})^\top$. Each pair of cell types $(c,d)$ contributes an $N\times N$ block:
+
+$$
+\Sigma_{cd}=\begin{cases}
+\sigma_g^2K+\sigma_e^2I_N,&c\ne d,\\
+(\sigma_g^2+v_c)K+(\sigma_e^2+w_c)I_N+D_c,&c=d,
+\end{cases}
+\qquad D_c=\operatorname{diag}(\delta_{1c},\ldots,\delta_{Nc}).
+$$
+
+For three illustrative cell types, write $S=\sigma_g^2K+\sigma_e^2I_N$ and $T_c=v_cK+w_cI_N+D_c$:
+
+$$
+\boxed{\operatorname{Cov}(\mathbf y\mid X)=
+\begin{pmatrix}
+S+T_1&S&S\\
+S&S+T_2&S\\
+S&S&S+T_3
+\end{pmatrix}.}
+$$
+
+Every block compares **the same gene** across two cell types and all donor pairs. Off-diagonal blocks carry shared covariance; diagonal blocks additionally contain type-specific variation and sampling noise. This is the structured **Free model**; its full-covariance extension allows more general cross-type patterns.
+
+| Object | Dimensions | What it contains |
+|---|---|---|
+| $Y_g$ | $N\times C$ | Observed expression for one gene |
+| $\Omega_g$ | $C\times C$ | Genetic covariance across cell types |
+| $\Sigma_{\rm CIGMA}$ | $NC\times NC$ | Covariance of all stacked donor–type observations |
+
+For $N=928,C=7$, the last object has dimensions $6{,}496\times6{,}496$. Its entries follow the variance-component structure above; the model estimates a small collection of variance parameters.
+
+### What does HE regression match?
+
+First consider expression centered at its population fixed-effect mean, $z_{ic}=y_{ic}-m_{ic}$. For donor indices $i,k$ and cell types $c,d$, the Free model implies
+
+$$
+\begin{aligned}
+E[z_{ic}z_{kd}\mid X]
+={}&K_{ik}\sigma_g^2
++K_{ik}\mathbf1(c=d)v_c\\
+&+\mathbf1(i=k)\sigma_e^2
++\mathbf1(i=k)\mathbf1(c=d)w_c\\
+&+\mathbf1(i=k)\mathbf1(c=d)\delta_{ic}.
+\end{aligned}
+$$
+
+| Covariance term | Which observations does it connect? |
+|---|---|
+| $K_{ik}\sigma_g^2$ | Genetically similar donors across every cell-type pair |
+| $K_{ik}\mathbf1(c=d)v_c$ | Additional genetic covariance within type $c$ |
+| $\mathbf1(i=k)\sigma_e^2$ | Shared residual variation across types in the same donor |
+| $\mathbf1(i=k)\mathbf1(c=d)w_c$ | Type-specific residual variance of one observation |
+| $\mathbf1(i=k)\mathbf1(c=d)\delta_{ic}$ | Sampling variance of that same expression mean |
+
+For example, different donors measured in different types have covariance $K_{ik}\sigma_g^2$; the same donor measured in different types has covariance $K_{ii}\sigma_g^2+\sigma_e^2$. Within one type, the genetic coefficient becomes $\sigma_g^2+v_c$.
+
+In practice, fixed effects are estimated. Let $F$ be their design matrix, $P=I-F(F^\top F)^{-1}F^\top$ for a full-rank design, and
+
+$$
+\mathbf R=P\mathbf y,\qquad
+R_{ic}=y_{ic}-\widehat m_{ic},\qquad
+E[\mathbf R\mathbf R^\top\mid X,F]=P\Sigma_{\rm CIGMA}P.
+$$
+
+**Each product $R_{ic}R_{kd}$ supplies a noisy second-moment observation. HE jointly matches these products to the projected model covariance.** The covariance basis matrices and the sampling offset receive the same projection as expression. The products share observations and are dependent; CIGMA uses a donor jackknife to quantify uncertainty. [HE implementation](https://github.com/Minhui-Chen/CIGMA/blob/5813e4ae84d7b3733dfcd938fe42d12c6b30a8aa/src/cigma/fit.py)
+
 ### Estimation and scientific output
 
-Haseman–Elston (HE) regression fits second moments. Let $P$ remove fixed effects, $y^*=Py$ be projected stacked expression, and $A_q=P\Sigma_qP$ be a projected covariance basis matrix from the decomposition above. Each $\Sigma_q$ multiplies one unknown variance parameter $\theta_q$. The fitting principle is
+Haseman–Elston (HE) regression fits second moments. Using $\mathbf R$ above, let $A_q=P\Sigma_qP$ be a projected covariance basis matrix from the decomposition above. Each $\Sigma_q$ multiplies one unknown variance parameter $\theta_q$. The fitting principle is
 
 $$
 \widehat\theta=\arg\min_\theta
-\left\|y^*y^{*\top}-P\widehat D P-\sum_q\theta_qA_q\right\|_F^2.
+\left\|\mathbf R\mathbf R^\top-P\widehat D P-\sum_q\theta_qA_q\right\|_F^2.
 $$
 
 The unknown coefficients include $\sigma_g^2,v_c,\sigma_e^2,w_c$. Genetic and residual donor variances are estimated together, after the cell-sampling correction. The source implements this moment regression and jackknife uncertainty; REML is also available. [Fitting code](https://github.com/Minhui-Chen/CIGMA/blob/5813e4ae84d7b3733dfcd938fe42d12c6b30a8aa/src/cigma/fit.py)
@@ -581,4 +669,4 @@ with $\lambda$ selected on validation data. This is a proposed safeguard, whose 
 
 ---
 
-**Revision: October 5, 2026. Data and computation.** The gene-overlap counts are transcribed from the September 28 OneK1K progress report and have not been re-estimated here. The LD and credible-set diagrams are teaching examples. [Figure-generation code]({{base}}/assets/case-study/make_diagrams.py). Source inspection refers to CIGMA commit `5813e4a` and CASE commit `13f4fc8`; no new OneK1K model fit is reported. Section 8 summarizes an annotation-prior pilot from the October 5 meeting draft; its synthetic results are reported from that draft and were not rerun for this update.
+**Revision: October 29, 2026. Data and computation.** Added the per-gene expression matrix, cell-type covariance blocks, and HE moment-matching derivation in Section 2. The gene-overlap counts are transcribed from the September 28 OneK1K progress report and have not been re-estimated here. The LD and credible-set diagrams are teaching examples. [Figure-generation code]({{base}}/assets/case-study/make_diagrams.py). Source inspection refers to CIGMA commit `5813e4a` and CASE commit `13f4fc8`; no new OneK1K model fit is reported. Section 8 summarizes an annotation-prior pilot from the October 5 meeting draft; its synthetic results are reported from that draft and were not rerun for this update.
